@@ -1,0 +1,16 @@
+digraph finite_state_machine {
+	rankdir=LR size="8,5"
+	node [shape=circle]
+	1384 -> 778 [label=e
+]
+	1384 -> 887 [label=e
+]
+	778 -> 916 [label=a
+]
+	887 -> 336 [label="#
+"]
+	916 -> 778 [label=e
+]
+	916 -> 887 [label=e
+]
+}
