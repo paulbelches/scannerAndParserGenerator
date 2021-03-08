@@ -5,6 +5,7 @@
 #include <string>
 #include <stack>
 #include <queue>
+#include <algorithm>
 #include<set>
 
 using namespace std;
@@ -47,7 +48,7 @@ string expand(string expr){
             r = r + expr[i];
         }
     }
-    r = r + "." + "#";
+    //r = r + "." + "#";
     return r;
 }
 
@@ -123,12 +124,11 @@ void printTree(Node* root, int counter){
     }
 }
 
-
 class Tree{
   public:
   Node* root;
   Tree(string expr){
-    queue<Node*> tree;
+    //queue<Node*> tree;
     stack<char> opStack; 
     //Read the expression
     string result;
@@ -144,33 +144,13 @@ class Tree{
                 } else if (expr[i] == ')') {
                     while (opStack.top() != '('){
                         result = result + opStack.top();
-                        if (opStack.top() == '*'){
-                            Node* temp = new Node(opStack.top(), tree.front(), NULL);
-                            tree.front() = temp;
-                            opStack.pop();
-                        } else if (opStack.top() == '.' || opStack.top() == '|'){
-                            Node* firstValue = tree.front();
-                            tree.pop();
-                            Node* temp = new Node(opStack.top(), firstValue, tree.front());
-                            tree.front() = temp;
-                            opStack.pop();
-                        }
+                        opStack.pop();
                     }
                     opStack.pop();
                 } else {
                     while (precedence(expr[i]) < precedence(opStack.top())){
                         result = result + opStack.top();
-                        if (opStack.top() == '*'){
-                            Node* temp = new Node(opStack.top(), tree.front(), NULL);
-                            tree.front() = temp;
-                            opStack.pop();
-                        } else if (opStack.top() == '.' || opStack.top() == '|'){
-                            Node* firstValue = tree.front();
-                            tree.pop();
-                            Node* temp = new Node(opStack.top(), firstValue, tree.front());
-                            tree.front() = temp;
-                            opStack.pop();
-                        }
+                        opStack.pop();
                         if (opStack.empty()) {
                             break;
                         } 
@@ -179,29 +159,37 @@ class Tree{
                 }
             }
         } else {
-            Node* temp = new Node(expr[i], NULL, NULL);
-            tree.push(temp);
             result = result + expr[i];
         }
     }
     
     while (!opStack.empty()){
         result = result + opStack.top();
-        if (opStack.top() == '*'){
-            Node* temp = new Node(opStack.top(), tree.front(), NULL);
-            tree.front() = temp;
-            opStack.pop();
-        } else if (opStack.top() == '.' || opStack.top() == '|'){
-            Node* firstValue = tree.front();
-            tree.pop();
-            Node* temp = new Node(opStack.top(), firstValue, tree.front());
-            tree.front() = temp;
-            opStack.pop();
-        }
+        opStack.pop();
     }
-    
-    cout << "Resultado: " << result << "\n";
-    root = tree.front();
+
+    stack<Node*> tree;
+    for (int i=0; i < result.size(); i=i+1){
+        if (isOperand(result[i])){
+            if (result[i] == '*'){
+                Node* temp = new Node('*', tree.top(), NULL);
+                tree.top() = temp;
+            } else if (result[i] == '.' || result[i] == '|'){
+                Node* firstValue = tree.top();
+                tree.pop();
+                Node* temp = new Node(result[i], tree.top(), firstValue);
+                tree.top() = temp;
+            }
+            //cout << result[i] << "\n";
+        } else {
+            tree.push(new Node(result[i], NULL, NULL));
+        }
+
+       //opStack.push(new Node(opStack.top(), NULL, NULL);); 
+    }
+    //cout << "Resultado: " << result << "\n";
+    //cout << "stack: " << tree.size() << "\n";
+    root = tree.top();
   }
 };
 
@@ -287,6 +275,13 @@ class AFN{
                 end = operand2->end;
                 //cout << "Sali de . \n";
             break; //add terminal character
+            case '#':
+                start = new AFNode();
+                end = new AFNode();
+                end->id = 9999;
+                start->addEdge('#', end);
+                //cout << "Sali de " << root->data << "\n";
+            break; //add terminal character
             default:
                 //cout << "Estoy en " << root->data << "\n";
                 //crear nodo inicial
@@ -300,27 +295,6 @@ class AFN{
     }
         //Simular cadena, moverse
 };
-/*
-set<string> generateSet(AFNode* start, set <string> nodes){
-    for (int i = 0; i < start->edges.size(); i = i + 1){
-        //check if it was already discover
-        string s = to_string(start->id)+" "+to_string(start->edges[i].second->id) +" "+start->edges[i].first;
-        set<string>::iterator it = nodes.find(s);
-        if (it!=nodes.end() || nodes.size() == 0){
-            //merge 
-            set<string> returnNodes = generateSet(start->edges[i].second, nodes);
-            set<string> temporalNodes(nodes);
-            temporalNodes.insert(returnNodes.begin(), returnNodes.end());
-            nodes = temporalNodes;
-                //insert
-            nodes.insert(s);
-        } else {
-            cout << "ya estaba";
-        }
-    }
-    //nodes.insert(to_string(start->id));
-    return nodes;
-}*/
 
 set<string> generateSet(AFNode* start){
     set<string> result;
@@ -362,6 +336,128 @@ void writeAFN(AFNode* start){
 	}
 }
 
+set<string> getAlphabet(string s){
+    //string nonAlphabet = '.*|()';
+    set<string> result;
+    for (int i=0; i<s.length();i++){
+        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')'){
+            string t(1,s[i]);
+            result.insert(t);
+        }
+    }
+    return result;
+}
+
+set<AFNode*> lock(set<AFNode*> initialNodes){
+    set<AFNode*> result;
+    stack<AFNode*> nodes;
+    for (auto const &e: initialNodes) {
+        nodes.push(e);
+        result.insert(e);
+    }
+    while (!nodes.empty()){
+        AFNode* temporalNode =  nodes.top();
+        nodes.pop();
+        for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
+            if (temporalNode->edges[i].first == 'e'){
+                result.insert(temporalNode->edges[i].second);
+                nodes.push(temporalNode->edges[i].second);
+            }
+        }
+    }
+    return result;
+}
+
+set<AFNode*> move(set<AFNode*> initialNodes, char character){
+    set<AFNode*> result;
+    stack<AFNode*> nodes;
+    for (auto const &e: initialNodes) {
+        nodes.push(e);
+    }
+    while (!nodes.empty()){
+        AFNode* temporalNode =  nodes.top();
+        nodes.pop();
+        for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
+            if (temporalNode->edges[i].first == character){
+                result.insert(temporalNode->edges[i].second);
+                nodes.push(temporalNode->edges[i].second);
+            }
+        }
+    }
+    return result;
+}
+
+void printSet(set<AFNode*> nodes){
+    cout << "-----------------inicio------------------ \n";
+    for (auto const &e: nodes) {
+        cout << e->id << "\n";
+    }
+    cout << "-----------------FIn------------------ \n";
+}
+
+class AFD{
+    public:
+    //AFDode* start;
+    vector <set<AFNode*>> states;
+    vector <vector <int>> transitions;
+    set<string> alphabet;
+    AFD(set<AFNode*> start, set<string> alphabet){
+        this->alphabet = alphabet;
+        states.push_back(start);
+        queue<set<AFNode*>> pendingStates;
+        pendingStates.push(start);
+        while (!pendingStates.empty()){
+            vector<int> temporalTransitions;
+            for (auto const &e: alphabet) {
+                set<AFNode*> temporalSet;
+                temporalSet = lock(move(pendingStates.front(), e[0]));
+                int pos = -1;
+                for (int i = 0; i < states.size(); i = i + 1){
+                    if (equal(states[i].begin(), states[i].end(), temporalSet.begin(),temporalSet.end())){
+                        pos = i;
+                    }
+                }
+                if (pos == -1){
+                    states.push_back(temporalSet);
+                    pos = states.size() - 1;
+                    pendingStates.push(temporalSet);
+                }
+                temporalTransitions.push_back(pos);
+            }
+            transitions.push_back(temporalTransitions);
+            pendingStates.pop();
+        }
+    }
+};
+
+string setToString(set<string> s){
+    string result = "";
+    for (auto const &e: s) {
+        result = result + e;
+    }
+    return result;
+}
+
+
+void writeAFD(AFD* afd){
+    fstream my_file;
+	my_file.open("afd.txt", ios::out);
+    //cout << nodes.size() << "\n";
+	if (!my_file) {
+		cout << "File not created!";
+	}
+	else {
+		cout << "File created successfully!" << "\n";
+        string s = setToString(afd->alphabet);
+        for (int i = 0; i < afd->transitions.size(); i = i + 1){
+            for (int j = 0; j < afd->transitions[i].size(); j = j + 1){
+                my_file << i << " "<< afd->transitions[i][j] << " " << s[j] << "\n";
+            }
+        }
+		my_file.close();
+	}
+}
+
 int main(int argc, char **argv) {
     //stack<Node*> tree; 
     string expr = expand(argv[1]); //asign the regex expresion
@@ -369,8 +465,21 @@ int main(int argc, char **argv) {
     Tree* tree = new Tree(expr);
     printTree(tree->root, 0);
     //cout << "TreeBuild \n";
-    //AFN* afn = new AFN(tree->root);
-    //writeAFN(afn->start);
+    AFN* afn = new AFN(tree->root);
+    afn->end->id = 9999;
+    writeAFN(afn->start);
+
+    set<string> alphabet = getAlphabet(expr);
+
+    set<AFNode*> initialState;
+    initialState.insert(afn->start);
+    initialState = lock(initialState);
+    //printSet(initialState);
+
+    AFD* afd = new AFD(initialState, alphabet);
+    writeAFD(afd);
+    //cout << afd->alphabet.size() << "\n";
+    //cout << setToString(afd->alphabet) << "\n";
 
     return 0;
 
