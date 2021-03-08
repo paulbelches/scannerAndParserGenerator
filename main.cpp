@@ -380,19 +380,19 @@ set<AFNode*> move(set<AFNode*> initialNodes, char character){
         for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
             if (temporalNode->edges[i].first == character){
                 result.insert(temporalNode->edges[i].second);
-                nodes.push(temporalNode->edges[i].second);
+                //nodes.push(temporalNode->edges[i].second);
             }
         }
     }
     return result;
 }
 
-void printSet(set<AFNode*> nodes){
-    cout << "-----------------inicio------------------ \n";
+string printSet(set<AFNode*> nodes){
+    string result = "";
     for (auto const &e: nodes) {
-        cout << e->id << "\n";
+        result = result + to_string(e->id) + " ";
     }
-    cout << "-----------------FIn------------------ \n";
+    return "{" + result + "} ";
 }
 
 class AFD{
@@ -417,7 +417,7 @@ class AFD{
                         pos = i;
                     }
                 }
-                if (pos == -1){
+                if (pos == -1 && temporalSet.size() > 0){
                     states.push_back(temporalSet);
                     pos = states.size() - 1;
                     pendingStates.push(temporalSet);
@@ -438,7 +438,6 @@ string setToString(set<string> s){
     return result;
 }
 
-
 void writeAFD(AFD* afd){
     fstream my_file;
 	my_file.open("afd.txt", ios::out);
@@ -451,7 +450,9 @@ void writeAFD(AFD* afd){
         string s = setToString(afd->alphabet);
         for (int i = 0; i < afd->transitions.size(); i = i + 1){
             for (int j = 0; j < afd->transitions[i].size(); j = j + 1){
-                my_file << i << " "<< afd->transitions[i][j] << " " << s[j] << "\n";
+                if (afd->transitions[i][j] != -1){
+                    my_file << i << " "<< afd->transitions[i][j] << " " << s[j] << "\n";
+                }
             }
         }
 		my_file.close();
@@ -468,19 +469,15 @@ int main(int argc, char **argv) {
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
     writeAFN(afn->start);
-
     set<string> alphabet = getAlphabet(expr);
-
     set<AFNode*> initialState;
     initialState.insert(afn->start);
     initialState = lock(initialState);
-    //printSet(initialState);
-
     AFD* afd = new AFD(initialState, alphabet);
     writeAFD(afd);
-    //cout << afd->alphabet.size() << "\n";
-    //cout << setToString(afd->alphabet) << "\n";
-
+    for(int i = 0; i < afd->states.size(); i = i+1){
+        cout << printSet(afd->states[i]) << afd->transitions[i][0] << " " << afd->transitions[i][1]<< " "  << afd->transitions[i][2] <<"\n";
+    }
     return 0;
 
 }
