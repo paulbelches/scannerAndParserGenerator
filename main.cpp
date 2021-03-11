@@ -11,7 +11,7 @@
 using namespace std;
 
 bool isOperand(char v){
-    string ops = "()|.*";
+    string ops = "()|.*?+";
     for (int i = 0; i < ops.length(); i = i + 1){
         if (ops[i] == v)
             return 1;
@@ -20,6 +20,9 @@ bool isOperand(char v){
 }
 
 int precedence(char v){
+    if (v == '?' || v == '+'){
+        return 4;
+    }
     string ops = "()|.*";
     for (int i = 0; i < ops.length(); i = i + 1){
         if (ops[i] == v)
@@ -46,14 +49,15 @@ class Node{
   }
 };
 ////////Tree external methods
-
 string sustitutions(string expr){
+    /*
     string r = "";
+    string s = "";
     string current = "";
     int parentesisCounter = 0;
     for (int i = 0; i < expr.length(); i = i + 1){
         if (expr[i] == '?'){
-            r = r + "|e";
+            r = r + "(" + current +"|e)";
             cout << "current: "<< current << "\n";
             current = current + "|e";
         } else if (expr[i] == '+'){
@@ -63,6 +67,7 @@ string sustitutions(string expr){
         } else {
             if (isOperand(expr[i])){
                 if (expr[i] == '(') {
+                    r = r + current;
                     current = "";
                     parentesisCounter = parentesisCounter + 1;
                 } else if (expr[i] == ')') {
@@ -75,13 +80,13 @@ string sustitutions(string expr){
                 if (parentesisCounter > 0){
                     current = current + expr[i];
                 } else {
+                    r = r + current;
                     current = expr[i];
                 }
             }
-            r = r + expr[i];
         }
-    }
-    return r;
+    }*/
+    return expr;
 }
 //expand string to include concat as a symbol
 string expand(string expr){
@@ -96,7 +101,7 @@ string expand(string expr){
                 r = r + '.';
                 cont = 0;
             }
-        } else if (expr[i] == ')' || expr[i] == '*'){
+        } else if (expr[i] == ')' || expr[i] == '*' || expr[i] == '+' || expr[i] == '?'){
             ;
         }
         else {
@@ -111,7 +116,6 @@ string expand(string expr){
     }
     return r;
 }
-
 
 set<string> generateTree(Node* root, set<string> nodes){
     string s(1, root->data);
@@ -190,7 +194,7 @@ class Tree{
                     }
                     opStack.pop();
                 } else {
-                    while (precedence(expr[i]) < precedence(opStack.top())){
+                    while (precedence(expr[i]) <= precedence(opStack.top())){
                         result = result + opStack.top();
                         opStack.pop();
                         if (opStack.empty()) {
@@ -210,6 +214,8 @@ class Tree{
         opStack.pop();
     }
 
+    cout << "Resultado: " << result << "\n";
+    
     stack<Node*> tree;
     for (int i=0; i < result.size(); i=i+1){
         if (isOperand(result[i])){
@@ -221,6 +227,14 @@ class Tree{
                 tree.pop();
                 Node* temp = new Node(result[i], tree.top(), firstValue);
                 tree.top() = temp;
+            } else if (result[i] == '+'){
+                Node* firstValue = new Node('*', tree.top(), NULL);
+                Node* temp = new Node('.', tree.top(), firstValue);
+                tree.top() = temp;
+            } else if (result[i] == '?'){
+                Node* firstValue = new Node('e', NULL, NULL);
+                Node* temp = new Node('|', tree.top(), firstValue);
+                tree.top() = temp;
             }
             //cout << result[i] << "\n";
         } else {
@@ -229,7 +243,7 @@ class Tree{
 
        //opStack.push(new Node(opStack.top(), NULL, NULL);); 
     }
-    //cout << "Resultado: " << result << "\n";
+    
     //cout << "stack: " << tree.size() << "\n";
     root = tree.top();
   }
@@ -462,7 +476,7 @@ set<string> getAlphabet(string s){
     //string nonAlphabet = '.*|()';
     set<string> result;
     for (int i=0; i<s.length();i++){
-        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')'){
+        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != 'e'){
             string t(1,s[i]);
             result.insert(t);
         }
@@ -473,6 +487,7 @@ set<string> getAlphabet(string s){
 set<AFNode*> lock(set<AFNode*> initialNodes){
     set<AFNode*> result;
     stack<AFNode*> nodes;
+    set<int> checkedNodes;
     for (auto const &e: initialNodes) {
         nodes.push(e);
         result.insert(e);
@@ -481,9 +496,11 @@ set<AFNode*> lock(set<AFNode*> initialNodes){
         AFNode* temporalNode =  nodes.top();
         nodes.pop();
         for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
-            if (temporalNode->edges[i].first == 'e'){
+            int tnum = temporalNode->edges[i].second->id;
+            if (temporalNode->edges[i].first == 'e' && checkedNodes.find(tnum) == checkedNodes.end()){
                 result.insert(temporalNode->edges[i].second);
                 nodes.push(temporalNode->edges[i].second);
+                checkedNodes.insert(tnum);
             }
         }
     }
@@ -649,6 +666,14 @@ class SyntaxTree{
                 Node* firstValue = tree.top();
                 tree.pop();
                 Node* temp = new Node(result[i], tree.top(), firstValue);
+                tree.top() = temp;
+            } else if (result[i] == '+'){
+                Node* firstValue = new Node('*', tree.top(), NULL);
+                Node* temp = new Node('.', tree.top(), firstValue);
+                tree.top() = temp;
+            } else if (result[i] == '?'){
+                Node* firstValue = new Node('e', NULL, NULL);
+                Node* temp = new Node('|', tree.top(), firstValue);
                 tree.top() = temp;
             }
             //cout << result[i] << "\n";
@@ -901,24 +926,27 @@ int main(int argc, char **argv) {
     //stack<Node*> tree; 
     string expr = expand(sustitutions(argv[1])); //asign the regex expresion
     cout << expr << "\n";
-    /*
     Tree* tree = new Tree(expr);
+    printTree(tree->root, 0);
+    /*
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
     writeAFN(afn->start);
+    */
     set<string> alphabet = getAlphabet(expr);
+    /*
     set<AFNode*> initialState;
     initialState.insert(afn->start);
     initialState = lock(initialState);
     AFD* afd = new AFD(initialState, alphabet);
-    writeAFD(afd);
+    writeAFD(afd);*/
     expr = expr + ".#";
     cout << expr << "\n";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
     fillFunctions(syntaxtree->root);
     printSyntaxTree(syntaxtree->root, 0);
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
-    writeAFDirect(afdirect);*/
+    writeAFDirect(afdirect);
     return 0;
 
 }
