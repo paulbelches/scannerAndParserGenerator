@@ -10,6 +10,24 @@
 
 using namespace std;
 
+bool isOperand(char v){
+    string ops = "()|.*";
+    for (int i = 0; i < ops.length(); i = i + 1){
+        if (ops[i] == v)
+            return 1;
+    }
+    return 0;
+}
+
+int precedence(char v){
+    string ops = "()|.*";
+    for (int i = 0; i < ops.length(); i = i + 1){
+        if (ops[i] == v)
+            return i;
+    }
+    return -1;
+}
+
 class Node{
   public:
   int id;
@@ -28,19 +46,43 @@ class Node{
   }
 };
 ////////Tree external methods
-/*
+
 string sustitutions(string expr){
     string r = "";
+    string current = "";
+    int parentesisCounter = 0;
     for (int i = 0; i < expr.length(); i = i + 1){
         if (expr[i] == '?'){
-            r = r + expr[i];
+            r = r + "|e";
+            cout << "current: "<< current << "\n";
+            current = current + "|e";
         } else if (expr[i] == '+'){
-            r = r + "";
+            r = r + current + "*";
+            cout << "current: "<< current << "\n";
+            current = current + current + "*";
         } else {
+            if (isOperand(expr[i])){
+                if (expr[i] == '(') {
+                    current = "";
+                    parentesisCounter = parentesisCounter + 1;
+                } else if (expr[i] == ')') {
+                    parentesisCounter = parentesisCounter - 1;
+                    current = "(" + current + ")";
+                } else {
+                    current = current + expr[i];
+                }
+            } else {
+                if (parentesisCounter > 0){
+                    current = current + expr[i];
+                } else {
+                    current = expr[i];
+                }
+            }
             r = r + expr[i];
         }
     }
-}*/
+    return r;
+}
 //expand string to include concat as a symbol
 string expand(string expr){
     string r = "";
@@ -70,23 +112,6 @@ string expand(string expr){
     return r;
 }
 
-bool isOperand(char v){
-    string ops = "()|.*";
-    for (int i = 0; i < ops.length(); i = i + 1){
-        if (ops[i] == v)
-            return 1;
-    }
-    return 0;
-}
-
-int precedence(char v){
-    string ops = "()|.*";
-    for (int i = 0; i < ops.length(); i = i + 1){
-        if (ops[i] == v)
-            return i;
-    }
-    return -1;
-}
 
 set<string> generateTree(Node* root, set<string> nodes){
     string s(1, root->data);
@@ -698,7 +723,7 @@ class AFDirect{
     void followpos(Node* node);
     set<int> getFollowpos(int id);
     char getLetter(int id);
-
+    int getNumber(char letter);
     
     AFDirect(Node* start, set<string> alphabet){
         followpos(start);
@@ -833,6 +858,14 @@ char AFDirect::getLetter(int id){
     }
 }
 
+int AFDirect::getNumber(char letter){
+    for (int i = 0; i < leafs.size(); i= i +1){
+        if (leafs[i] == letter){
+            return ids[i];
+        }
+    }
+}
+
 void writeAFDirect(AFDirect* afdirect){
     fstream my_file;
 	my_file.open("afdirect.txt", ios::out);
@@ -845,8 +878,14 @@ void writeAFDirect(AFDirect* afdirect){
         //optener id del final
         //revisar sets 
         //write transitions
+        int finalNum = afdirect->getNumber('#');
+        cout << finalNum << "\n";
+        for (int i = 0; i < afdirect->states.size(); i = i + 1){
+            if (afdirect->states[i].find(finalNum) != afdirect->states[i].end()){
+                my_file << i << "\n";
+            }
+        }
         string s = setToString(afdirect->alphabet);
-        cout << s << "/n";
         for (int i = 0; i < afdirect->transitions.size(); i = i + 1){
             for (int j = 0; j < afdirect->transitions[i].size(); j = j + 1){
                 if (afdirect->transitions[i][j] != -1){
@@ -860,8 +899,9 @@ void writeAFDirect(AFDirect* afdirect){
 
 int main(int argc, char **argv) {
     //stack<Node*> tree; 
-    string expr = expand(argv[1]); //asign the regex expresion
+    string expr = expand(sustitutions(argv[1])); //asign the regex expresion
     cout << expr << "\n";
+    /*
     Tree* tree = new Tree(expr);
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
@@ -878,7 +918,7 @@ int main(int argc, char **argv) {
     fillFunctions(syntaxtree->root);
     printSyntaxTree(syntaxtree->root, 0);
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
-    writeAFDirect(afdirect);
+    writeAFDirect(afdirect);*/
     return 0;
 
 }

@@ -46,11 +46,11 @@ with open(filename) as f:
 f = Digraph('finite_state_machine', filename='afdirect.gv')
 f.attr(rankdir='LR', size='8,5')
 
-#f.attr('node', shape='doublecircle')
-#for line in content:
-#    edge = line.split(" ")
-#    if (len(edge) == 1):
-#        f.node(edge[0])
+f.attr('node', shape='doublecircle')
+for line in content:
+    edge = line.split(" ")
+    if (len(edge) == 1):
+        f.node(edge[0])
 
 f.attr('node', shape='circle')
 

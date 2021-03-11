@@ -3,50 +3,36 @@ digraph finite_state_machine {
 	node [shape=doublecircle]
 	9999
 	node [shape=circle]
-	1394 -> 4023 [label=e
+	1422 -> 2363 [label=e
 ]
-	212 -> 4173 [label=e
+	1422 -> 28 [label=e
 ]
-	2568 -> 4173 [label=e
+	2363 -> 4173 [label=a
 ]
-	2863 -> 4068 [label=b
+	2568 -> 369 [label=e
 ]
-	3059 -> 3070 [label=a
+	2568 -> 9999 [label=e
 ]
-	3070 -> 4023 [label=e
+	2764 -> 3691 [label=e
 ]
-	3168 -> 1394 [label=b
+	28 -> 3927 [label=e
 ]
-	3427 -> 369 [label=e
-]
-	3427 -> 737 [label=e
+	28 -> 60 [label=e
 ]
 	369 -> 2568 [label=b
 ]
-	3927 -> 3427 [label=e
+	3691 -> 2363 [label=e
 ]
-	3927 -> 541 [label=e
+	3691 -> 28 [label=e
 ]
-	4023 -> 4803 [label=e
+	3927 -> 541 [label=b
 ]
-	4023 -> 9999 [label=e
+	4173 -> 369 [label=e
 ]
-	4068 -> 4803 [label=e
+	4173 -> 9999 [label=e
 ]
-	4068 -> 9999 [label=e
+	541 -> 3691 [label=e
 ]
-	4173 -> 3427 [label=e
-]
-	4173 -> 541 [label=e
-]
-	4803 -> 3059 [label=e
-]
-	4803 -> 3168 [label=e
-]
-	541 -> 783 [label=a
-]
-	737 -> 212 [label=b
-]
-	783 -> 2863 [label=b
+	60 -> 2764 [label=b
 ]
 }
