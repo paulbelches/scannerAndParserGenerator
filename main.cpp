@@ -630,7 +630,6 @@ class SyntaxTree{
         } else {
             tree.push(new Node(result[i], NULL, NULL));
         }
-        cout << tree.size() << "\n";
        //opStack.push(new Node(opStack.top(), NULL, NULL);); 
     }
     //cout << "Resultado: " << result << "\n";
@@ -713,7 +712,6 @@ class AFDirect{
                 set<int> newState;
                 set<int> result;
                 for (auto const &h: pendingStates.front()) {
-                    cout << h << getLetter(h) << "\n";
                     if(getLetter(h) == e[0]){
                         //cout << h << getLetter(h) << " " << printIntSet(getFollowpos(h)) << "\n";
                         result = getFollowpos(h);
