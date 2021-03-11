@@ -48,46 +48,6 @@ class Node{
     this->right=right;
   }
 };
-////////Tree external methods
-string sustitutions(string expr){
-    /*
-    string r = "";
-    string s = "";
-    string current = "";
-    int parentesisCounter = 0;
-    for (int i = 0; i < expr.length(); i = i + 1){
-        if (expr[i] == '?'){
-            r = r + "(" + current +"|e)";
-            cout << "current: "<< current << "\n";
-            current = current + "|e";
-        } else if (expr[i] == '+'){
-            r = r + current + "*";
-            cout << "current: "<< current << "\n";
-            current = current + current + "*";
-        } else {
-            if (isOperand(expr[i])){
-                if (expr[i] == '(') {
-                    r = r + current;
-                    current = "";
-                    parentesisCounter = parentesisCounter + 1;
-                } else if (expr[i] == ')') {
-                    parentesisCounter = parentesisCounter - 1;
-                    current = "(" + current + ")";
-                } else {
-                    current = current + expr[i];
-                }
-            } else {
-                if (parentesisCounter > 0){
-                    current = current + expr[i];
-                } else {
-                    r = r + current;
-                    current = expr[i];
-                }
-            }
-        }
-    }*/
-    return expr;
-}
 //expand string to include concat as a symbol
 string expand(string expr){
     string r = "";
@@ -635,7 +595,7 @@ class SyntaxTree{
                     }
                     opStack.pop();
                 } else {
-                    while (precedence(expr[i]) < precedence(opStack.top())){
+                    while (precedence(expr[i]) <= precedence(opStack.top())){
                         result = result + opStack.top();
                         opStack.pop();
                         if (opStack.empty()) {
@@ -924,22 +884,19 @@ void writeAFDirect(AFDirect* afdirect){
 
 int main(int argc, char **argv) {
     //stack<Node*> tree; 
-    string expr = expand(sustitutions(argv[1])); //asign the regex expresion
+    string expr = expand(argv[1]); //asign the regex expresion
     cout << expr << "\n";
     Tree* tree = new Tree(expr);
     printTree(tree->root, 0);
-    /*
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
     writeAFN(afn->start);
-    */
     set<string> alphabet = getAlphabet(expr);
-    /*
     set<AFNode*> initialState;
     initialState.insert(afn->start);
     initialState = lock(initialState);
     AFD* afd = new AFD(initialState, alphabet);
-    writeAFD(afd);*/
+    writeAFD(afd);
     expr = expr + ".#";
     cout << expr << "\n";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
