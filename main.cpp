@@ -745,7 +745,7 @@ class AFDirect{
                 //Agregar transicipon
                 }
                 temporalTransitions.push_back(pos);
-                cout << printIntSet(pendingStates.front()) << " " << e << " " << printIntSet(newState) << pos << "\n";
+                //cout << printIntSet(pendingStates.front()) << " " << e << " " << printIntSet(newState) << pos << "\n";
             }
             transitions.push_back(temporalTransitions);
             pendingStates.pop();
@@ -817,12 +817,13 @@ void AFDirect::followpos(Node* node){
             pendingnodes.push(root->right);
         }
     }
+    /*
     for (int i = 0; i <  nodes.size(); i = i + 1){
         cout << nodes[i] << " " << printIntSet(followposV[i]) << "\n";
     }
     for (int i = 0; i < leafs.size(); i = i + 1){
         cout << ids[i] << " " << leafs[i] << "\n";
-    }
+    }*/
 }
 
 set<int> AFDirect::getFollowpos(int id){
@@ -860,11 +861,7 @@ void writeAFDirect(AFDirect* afdirect){
 	}
 	else {
 		cout << "File created successfully!" << "\n";
-        //optener id del final
-        //revisar sets 
-        //write transitions
         int finalNum = afdirect->getNumber('#');
-        cout << finalNum << "\n";
         for (int i = 0; i < afdirect->states.size(); i = i + 1){
             if (afdirect->states[i].find(finalNum) != afdirect->states[i].end()){
                 my_file << i << "\n";
@@ -880,6 +877,74 @@ void writeAFDirect(AFDirect* afdirect){
         }
 		my_file.close();
 	}
+}
+
+void printAFD(AFD* afd){
+    cout << "///////////////////////Deterministic automata/////////////////////// \n";
+    cout << "=========== Estados =========== \n";
+    for (int i = 0; i <  afd->states.size(); i = i + 1){
+        cout << i << " " << printSet(afd->states[i]) << "\n";
+    }
+    cout << "=============================== \n";
+    cout << "=========== Transiciones =========== \n";
+    string s = setToString(afd->alphabet);
+    string trans = "    ";
+    for (int j = 0; j <  s.size(); j = j + 1){
+        trans = trans + s[j] + "   ";
+    }
+    cout << trans << "\n";
+    for (int i = 0; i <  afd->states.size(); i = i + 1){\
+        trans = to_string(i) + "   ";
+        for (int j = 0; j <  s.size(); j = j + 1){
+            if (afd->transitions[i][j] == -1){
+                trans = trans + "-" + "   ";
+            } else {
+                trans = trans + to_string(afd->transitions[i][j]) + "   ";
+            }
+        }
+        cout << trans << "\n";
+    }
+    cout << "=============================== \n";
+    cout << "//////////////////////////////////////////////////////// \n";
+}
+
+void printAFDirect(AFDirect* afd){
+    cout << "///////////////////////Deterministic direct automata/////////////////////// \n";
+    cout << "=========== Reference table =========== \n";
+    for (int i = 0; i <  afd->ids.size(); i = i + 1){
+        cout << afd->ids[i] << " " << afd->leafs[i] << "\n";
+    }
+    cout << "=============================== \n";
+        cout << "=========== Follow pos =========== \n";
+    for (int i = 0; i <  afd->nodes.size(); i = i + 1){
+        cout << afd->nodes[i] << " " << printIntSet(afd->followposV[i]) << "\n";
+    }
+    cout << "=============================== \n";
+    cout << "=========== Estados =========== \n";
+    for (int i = 0; i <  afd->states.size(); i = i + 1){
+        cout << i << " " << printIntSet(afd->states[i]) << "\n";
+    }
+    cout << "=============================== \n";
+    cout << "=========== Transiciones =========== \n";
+    string s = setToString(afd->alphabet);
+    string trans = "    ";
+    for (int j = 0; j <  s.size(); j = j + 1){
+        trans = trans + s[j] + "   ";
+    }
+    cout << trans << "\n";
+    for (int i = 0; i <  afd->states.size(); i = i + 1){\
+        trans = to_string(i) + "   ";
+        for (int j = 0; j <  s.size(); j = j + 1){
+            if (afd->transitions[i][j] == -1){
+                trans = trans + "-" + "   ";
+            } else {
+                trans = trans + to_string(afd->transitions[i][j]) + "   ";
+            }
+        }
+        cout << trans << "\n";
+    }
+    cout << "=============================== \n";
+    cout << "//////////////////////////////////////////////////////// \n";
 }
 
 bool simulateAFN(set<AFNode*> initialState, string chain){
@@ -911,7 +976,11 @@ bool simulateAFD(AFD* afd, string chain){
         if (transition == -1){
             return 0;
         }
-        currentState = afd->transitions[i][transition];
+        //cout << currentState << " " << transition << " " << afd->transitions[i].size() << "\n";
+        currentState = afd->transitions[currentState][transition];
+        if (currentState == -1){
+            return 0;
+        }
     }
     for (auto const &e: afd->states[currentState]) {
         if (e->id == 9999) {
@@ -936,7 +1005,10 @@ bool simulateAFDirect(AFDirect* afd, string chain){
         if (transition == -1){
             return 0;
         }
-        currentState = afd->transitions[i][transition];
+        currentState = afd->transitions[currentState][transition];
+        if (currentState == -1){
+            return 0;
+        }
     }
     int finalNum = afd->getNumber('#');
     return afd->states[currentState].find(finalNum) != afd->states[currentState].end();
@@ -947,9 +1019,10 @@ int main(int argc, char **argv) {
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
     cout << expr << "\n";
-    cout << chain << "\n";
     SyntaxTree* tree = new SyntaxTree(expr);
+    cout << "///////////////////////Binary tree/////////////////////// \n";
     printTree(tree->root, 0);
+    cout << "//////////////////////////////////////////////////////// \n";
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
     writeAFN(afn->start);
@@ -959,13 +1032,16 @@ int main(int argc, char **argv) {
     initialState = lock(initialState);
     AFD* afd = new AFD(initialState, alphabet);
     writeAFD(afd);
+    printAFD(afd);
     expr = expr + ".#";
-    cout << expr << "\n";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
     fillFunctions(syntaxtree->root);
+    cout << "///////////////////////Binary tree/////////////////////// \n";
     printSyntaxTree(syntaxtree->root, 0);
+    cout << "//////////////////////////////////////////////////////// \n";
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
     writeAFDirect(afdirect);
+    printAFDirect(afdirect);
     cout << "Non deterministic automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
     cout << "Deterministic automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
     cout << "Direct deterministic automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
