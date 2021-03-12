@@ -130,7 +130,7 @@ void printTree(Node* root, int counter){
         printTree(root->right, counter + 1);
     }
 }
-
+/*
 class Tree{
   public:
   Node* root;
@@ -207,7 +207,7 @@ class Tree{
     //cout << "stack: " << tree.size() << "\n";
     root = tree.top();
   }
-};
+};*/
 
 bool nullable(Node* root){
     if (root->data == 'e'){
@@ -436,7 +436,7 @@ set<string> getAlphabet(string s){
     //string nonAlphabet = '.*|()';
     set<string> result;
     for (int i=0; i<s.length();i++){
-        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != 'e'){
+        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != 'e' && s[i] != '?' && s[i] != '+'){
             string t(1,s[i]);
             result.insert(t);
         }
@@ -679,7 +679,7 @@ void printSyntaxTree(Node* root, int counter){
 
 string printIntSet(set<int> set){
     string result ;
-     for (auto const &e: set) {
+    for (auto const &e: set) {
         result = result + to_string(e) + " ";
     }   
     return "{ " + result + "}";
@@ -882,11 +882,73 @@ void writeAFDirect(AFDirect* afdirect){
 	}
 }
 
+bool simulateAFN(set<AFNode*> initialState, string chain){
+    bool result = false;
+    set<AFNode*> resultSet = initialState;
+    for (int i = 0; i < chain.size(); i++){
+        resultSet = lock(move(resultSet, chain[i]));
+    }
+    for (auto const &e: resultSet) {
+        if (e->id == 9999) {
+            result = true;
+        }
+    }  
+    return result;
+}
+
+bool simulateAFD(AFD* afd, string chain){
+    bool result = false;
+    int currentState = 0;
+    for (int i = 0; i < chain.size(); i++){
+        int cont = 0 ;
+        int transition = -1 ;//check if it does not change
+        for (auto const &e: afd->alphabet) {
+            if (e[0] == chain[i]) {
+                transition = cont;
+            }
+            cont = cont + 1;
+        } 
+        if (transition == -1){
+            return 0;
+        }
+        currentState = afd->transitions[i][transition];
+    }
+    for (auto const &e: afd->states[currentState]) {
+        if (e->id == 9999) {
+            result = true;
+        }
+    }  
+    return result;
+}
+
+bool simulateAFDirect(AFDirect* afd, string chain){
+    bool result = false;
+    int currentState = 0;
+    for (int i = 0; i < chain.size(); i++){
+        int cont = 0 ;
+        int transition = -1 ;//check if it does not change
+        for (auto const &e: afd->alphabet) {
+            if (e[0] == chain[i]) {
+                transition = cont;
+            }
+            cont = cont + 1;
+        } 
+        if (transition == -1){
+            return 0;
+        }
+        currentState = afd->transitions[i][transition];
+    }
+    int finalNum = afd->getNumber('#');
+    return afd->states[currentState].find(finalNum) != afd->states[currentState].end();
+}
+
 int main(int argc, char **argv) {
     //stack<Node*> tree; 
     string expr = expand(argv[1]); //asign the regex expresion
+    string chain = argv[2];
     cout << expr << "\n";
-    Tree* tree = new Tree(expr);
+    cout << chain << "\n";
+    SyntaxTree* tree = new SyntaxTree(expr);
     printTree(tree->root, 0);
     AFN* afn = new AFN(tree->root);
     afn->end->id = 9999;
@@ -904,6 +966,8 @@ int main(int argc, char **argv) {
     printSyntaxTree(syntaxtree->root, 0);
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
     writeAFDirect(afdirect);
+    cout << "Non deterministic automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
+    cout << "Deterministic automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
+    cout << "Direct deterministic automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
     return 0;
-
 }
