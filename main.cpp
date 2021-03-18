@@ -31,6 +31,23 @@ int precedence(char v){
     return -1;
 }
 
+bool correctParentesis(string expr){
+    int openParentesis = 0;
+    int closingParentesis = 0;
+    for (int i = 0; i < expr.size(); i = i + 1){
+        if (closingParentesis > openParentesis) {
+            return 0;
+        }
+        if (expr[i] == '('){
+            openParentesis = openParentesis + 1;
+        }
+        if (expr[i] == ')'){
+            closingParentesis = closingParentesis + 1;
+        }
+    }
+    return openParentesis == closingParentesis;
+}
+
 class Node{
   public:
   int id;
@@ -130,84 +147,6 @@ void printTree(Node* root, int counter){
         printTree(root->right, counter + 1);
     }
 }
-/*
-class Tree{
-  public:
-  Node* root;
-  Tree(string expr){
-    stack<char> opStack; 
-    //Read the expression
-    string result;
-    for (int i = 0; i < expr.length(); i = i + 1){
-        if (isOperand(expr[i])){
-            if (opStack.size() == 0){
-                opStack.push(expr[i]);
-            } else {
-                if (precedence(expr[i]) > precedence(opStack.top())) {
-                    opStack.push(expr[i]);
-                } else if (expr[i] == '(') {
-                    opStack.push(expr[i]);
-                } else if (expr[i] == ')') {
-                    while (opStack.top() != '('){
-                        result = result + opStack.top();
-                        opStack.pop();
-                    }
-                    opStack.pop();
-                } else {
-                    while (precedence(expr[i]) <= precedence(opStack.top())){
-                        result = result + opStack.top();
-                        opStack.pop();
-                        if (opStack.empty()) {
-                            break;
-                        } 
-                    }
-                    opStack.push(expr[i]);
-                }
-            }
-        } else {
-            result = result + expr[i];
-        }
-    }
-    
-    while (!opStack.empty()){
-        result = result + opStack.top();
-        opStack.pop();
-    }
-
-    cout << "Resultado: " << result << "\n";
-    
-    stack<Node*> tree;
-    for (int i=0; i < result.size(); i=i+1){
-        if (isOperand(result[i])){
-            if (result[i] == '*'){
-                Node* temp = new Node('*', tree.top(), NULL);
-                tree.top() = temp;
-            } else if (result[i] == '.' || result[i] == '|'){
-                Node* firstValue = tree.top();
-                tree.pop();
-                Node* temp = new Node(result[i], tree.top(), firstValue);
-                tree.top() = temp;
-            } else if (result[i] == '+'){
-                Node* firstValue = new Node('*', tree.top(), NULL);
-                Node* temp = new Node('.', tree.top(), firstValue);
-                tree.top() = temp;
-            } else if (result[i] == '?'){
-                Node* firstValue = new Node('e', NULL, NULL);
-                Node* temp = new Node('|', tree.top(), firstValue);
-                tree.top() = temp;
-            }
-            //cout << result[i] << "\n";
-        } else {
-            tree.push(new Node(result[i], NULL, NULL));
-        }
-
-       //opStack.push(new Node(opStack.top(), NULL, NULL);); 
-    }
-    
-    //cout << "stack: " << tree.size() << "\n";
-    root = tree.top();
-  }
-};*/
 
 bool nullable(Node* root){
     if (root->data == 'e'){
@@ -266,14 +205,6 @@ set<Node*> firstpos(Node* root){
     } else {
         result.insert(root);
     } 
-    return result;
-}
-
-set<int> toIntSet(set<Node*> nodes){
-    set<int> result;
-    for (auto const &e: nodes) {
-        result.insert(e->id);
-    }
     return result;
 }
 
@@ -505,11 +436,13 @@ class AFD{
         states.push_back(start);
         queue<set<AFNode*>> pendingStates;
         pendingStates.push(start);
+        cout << "Estado inicial " << printSet(pendingStates.front()) << "\n";
         while (!pendingStates.empty()){
             vector<int> temporalTransitions;
             for (auto const &e: alphabet) {
                 set<AFNode*> temporalSet;
                 temporalSet = lock(move(pendingStates.front(), e[0]));
+                cout << printSet(pendingStates.front()) << "-" << e[0] << "->" << printSet(temporalSet) << "\n";
                 int pos = -1;
                 for (int i = 0; i < states.size(); i = i + 1){
                     if (equal(states[i].begin(), states[i].end(), temporalSet.begin(),temporalSet.end())){
@@ -693,6 +626,14 @@ set<int> setNodeToSetInt(set<Node*> nodes){
     return result;
 }
 
+set<int> setAFNodeToSetInt(set<AFNode*> nodes){
+    set<int> result;
+    for (auto const &e: nodes) {
+        result.insert(e->id);
+    }
+    return result;
+}
+
 class AFDirect{
     public:
     //followpos table
@@ -751,6 +692,15 @@ class AFDirect{
             pendingStates.pop();
         }
     }
+
+    AFDirect( vector <set<int>> states, vector <vector <int>> transitions, 
+    set<string> alphabet, vector<int> ids, vector<char> leafs){
+        this->alphabet = alphabet;
+        this->states = states;
+        this->transitions = transitions;
+        this->leafs = leafs;
+        this->ids = ids;
+    }
 };
 
 void AFDirect::followpos(Node* node){
@@ -775,7 +725,7 @@ void AFDirect::followpos(Node* node){
                     followposV.push_back(dummy);
                     pos = nodes.size() - 1;
                 }
-                result = toIntSet(firstpos(root->right));
+                result = setNodeToSetInt(firstpos(root->right));
                 followposV[pos].insert(result.begin(), result.end());
             } 
 
@@ -793,7 +743,7 @@ void AFDirect::followpos(Node* node){
                     followposV.push_back(dummy);
                     pos = nodes.size() - 1;
                 }
-                result = toIntSet(root->firstpos);
+                result = setNodeToSetInt(root->firstpos);
                 followposV[pos].insert(result.begin(), result.end());
             };
         } else if (root->data != '|'){ //create reference table
@@ -850,11 +800,12 @@ int AFDirect::getNumber(char letter){
             return ids[i];
         }
     }
+    return -1;
 }
 
-void writeAFDirect(AFDirect* afdirect){
+void writeAFDirect(AFDirect* afdirect, string name){
     fstream my_file;
-	my_file.open("afdirect.txt", ios::out);
+	my_file.open(name, ios::out);
     //cout << nodes.size() << "\n";
 	if (!my_file) {
 		cout << "File not created!";
@@ -1014,10 +965,118 @@ bool simulateAFDirect(AFDirect* afd, string chain){
     return afd->states[currentState].find(finalNum) != afd->states[currentState].end();
 }
 
-int main(int argc, char **argv) {
-    //stack<Node*> tree; 
+vector<int> setIntToVectorInt(set<int> set){
+    vector<int> result;
+    for (auto const &e: set) {
+        result.push_back(e);
+    }
+    return result;
+}
+
+int getPositionInSet(set<set<int>> partition, int num) {
+    int cont = 0;
+    for (auto const &e: partition) {
+        if (e.find(num) != e.end() ){
+            return cont;
+        }
+        cont ++;
+    }
+    return -1;
+}
+
+set<set<int>> separateSets(set<set<int>> partition, set<string> alphabet, vector <vector <int>> transitions){
+    bool changed = true;
+    while (changed){
+        changed = false;
+        set<set<int>> resul;
+        set<int> newSet;
+        for (auto const &e: partition) {
+            set<int> tempSet = e;
+            vector<int> comparisonVector (alphabet.size(),-1);  
+            if (tempSet.size() > 1){
+                for (auto const &f: e) {
+                    for(int i = 0; i < alphabet.size(); i = i + 1){
+                        int result = transitions[f][i];
+                        if (result != -1) {
+                            // add -1 condition
+                            if (comparisonVector[i] == -1){
+                                comparisonVector[i] = getPositionInSet(partition, result);
+                            } else if (comparisonVector[i] != getPositionInSet(partition, result) ){
+                                newSet.insert(f);
+                                tempSet.erase(f);
+                            }
+                        }
+                    }
+                }
+                resul.insert(tempSet); 
+            } else {
+                resul.insert(tempSet);
+            }
+        }
+        if (newSet.size() > 0){
+            resul.insert(newSet);
+            partition = resul;
+            changed = true;
+        }
+    }
+    return partition;
+}
+
+AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <vector <int>> transitions){
+    set<int> temp1;
+    set<int> temp2;
+    //Separate sets
+    set<int> terminals;
+    for (int i = 0; i < states.size(); i = i + 1){
+        //set<int> intSet =setAFNodeToSetInt(states[i]);
+        if (states[i].find(9999) == states[i].end() ){
+            temp1.insert(i);
+        } else {
+            temp2.insert(i);
+            terminals.insert(i);
+        }
+    }
+    set<set<int>> partition;
+    partition.insert(temp1);
+    partition.insert(temp2);
+    partition = separateSets(partition, alphabet, transitions);
+    vector <set<int>> finalStates;
+    vector <vector <int>> finalTransitions;
+    for (auto const &e: partition) {
+        bool terminalFlag = false;
+        set<int> tempSet = e;
+        vector<int> tempTransition (alphabet.size(),-1);
+        for (auto const &f: e) {
+            if (terminals.find(f) != terminals.end()){
+                terminalFlag = true;
+            }
+            for(int i = 0; i < alphabet.size(); i = i + 1){
+                int result = transitions[f][i];
+                if (result != -1) {
+                    tempTransition[i] = getPositionInSet(partition, result);
+                }
+            }
+        }
+        if (terminalFlag){
+            tempSet.insert(9999);
+        }
+        finalStates.push_back(tempSet);
+        finalTransitions.push_back(tempTransition);
+    }
+
+    vector<int> ids;
+    ids.push_back(9999);
+    vector<char> leafs;
+    leafs.push_back('#');
+    return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
+}
+
+int main(int argc, char **argv) { 
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
+
+    ///check that chain contains the correct alphabet
+    ///check parentesis and operators  
     cout << expr << "\n";
     SyntaxTree* tree = new SyntaxTree(expr);
     cout << "///////////////////////Binary tree/////////////////////// \n";
@@ -1033,6 +1092,13 @@ int main(int argc, char **argv) {
     AFD* afd = new AFD(initialState, alphabet);
     writeAFD(afd);
     printAFD(afd);
+    vector <set<int>> statesVector;
+    for (int i = 0; i < afd->states.size(); i = i + 1) {
+        statesVector.push_back(setAFNodeToSetInt(afd->states[i]));
+    }
+    AFDirect* afdmini = minimization(statesVector, afd->alphabet,afd->transitions);
+    writeAFDirect(afdmini, "afdmini.txt");
+    printAFDirect(afdmini);
     expr = expr + ".#";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
     fillFunctions(syntaxtree->root);
@@ -1040,7 +1106,7 @@ int main(int argc, char **argv) {
     printSyntaxTree(syntaxtree->root, 0);
     cout << "//////////////////////////////////////////////////////// \n";
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
-    writeAFDirect(afdirect);
+    writeAFDirect(afdirect, "afdirect.txt");
     printAFDirect(afdirect);
     cout << "Non deterministic automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
     cout << "Deterministic automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
