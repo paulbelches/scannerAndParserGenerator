@@ -21,7 +21,7 @@ digraph finite_state_machine {
 ]
 	3927 -> 60 [label=e
 ]
-	541 -> 3427 [label=b
+	541 -> 3427 [label=e
 ]
 	60 -> 28 [label=e
 ]
