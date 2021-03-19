@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# Generated files
+*.txt
+*.gv
+*.pdf
