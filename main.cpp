@@ -7,6 +7,8 @@
 #include <queue>
 #include <algorithm>
 #include<set>
+#include <chrono> 
+
 /* File:     
  *     main.cpp
  *
@@ -31,6 +33,7 @@
  *    omp_mat_vect <'regular expresion'> <string>
  *
  */
+using namespace std::chrono; 
 using namespace std;
 
 /*---------------------------------------------------------------------
@@ -525,7 +528,7 @@ class AFD{
         states.push_back(start);
         queue<set<AFNode*>> pendingStates;
         pendingStates.push(start);
-        cout << "Estado inicial " << printSet(pendingStates.front()) << "\n";
+        cout << "Initial state" << printSet(pendingStates.front()) << "\n";
         while (!pendingStates.empty()){
             vector<int> temporalTransitions;
             for (auto const &e: alphabet) {
@@ -657,24 +660,39 @@ class SyntaxTree{
         result = result + opStack.top();
         opStack.pop();
     }
-    cout << "resultado:" << result << "\n";
+    cout << "result:" << result << "\n";
     stack<Node*> tree;
     for (int i=0; i < result.size(); i=i+1){
         if (isOperator(result[i])){
             if (result[i] == '*'){
                 //cout << tree.front()->data << "\n";
+                if (tree.size() == 0){
+                    throw std::invalid_argument( "bad expresion received" );
+                }
                 Node* temp = new Node('*', tree.top(), NULL);
                 tree.top() = temp;
             } else if (result[i] == '.' || result[i] == '|'){
+                if (tree.size() == 0){
+                    throw std::invalid_argument( "bad expresion received" );
+                }
                 Node* firstValue = tree.top();
                 tree.pop();
+                if (tree.size() == 0){
+                    throw std::invalid_argument( "bad expresion received" );
+                }
                 Node* temp = new Node(result[i], tree.top(), firstValue);
                 tree.top() = temp;
             } else if (result[i] == '+'){
+                if (tree.size() == 0){
+                    throw std::invalid_argument( "bad expresion received" );
+                }
                 Node* firstValue = new Node('*', tree.top(), NULL);
                 Node* temp = new Node('.', tree.top(), firstValue);
                 tree.top() = temp;
             } else if (result[i] == '?'){
+                if (tree.size() == 0){
+                    throw std::invalid_argument( " bad expresion received" );
+                }
                 Node* firstValue = new Node('e', NULL, NULL);
                 Node* temp = new Node('|', tree.top(), firstValue);
                 tree.top() = temp;
@@ -1015,12 +1033,12 @@ void writeAFDirect(AFDirect* afdirect, string name){
  */
 void printAFD(AFD* afd){
     cout << "///////////////////////deterministic finite automata/////////////////////// \n";
-    cout << "=========== Estados =========== \n";
+    cout << "=========== States =========== \n";
     for (int i = 0; i <  afd->states.size(); i = i + 1){
         cout << i << " " << printSet(afd->states[i]) << "\n";
     }
     cout << "=============================== \n";
-    cout << "=========== Transiciones =========== \n";
+    cout << "=========== Transitions =========== \n";
     string s = setToString(afd->alphabet);
     string trans = "    ";
     for (int j = 0; j <  s.size(); j = j + 1){
@@ -1059,12 +1077,12 @@ void printAFDirect(AFDirect* afd){
         cout << afd->nodes[i] << " " << printIntSet(afd->followposV[i]) << "\n";
     }
     cout << "=============================== \n";
-    cout << "=========== Estados =========== \n";
+    cout << "=========== States =========== \n";
     for (int i = 0; i <  afd->states.size(); i = i + 1){
         cout << i << " " << printIntSet(afd->states[i]) << "\n";
     }
     cout << "=============================== \n";
-    cout << "=========== Transiciones =========== \n";
+    cout << "=========== Transitions =========== \n";
     string s = setToString(afd->alphabet);
     string trans = "    ";
     for (int j = 0; j <  s.size(); j = j + 1){
@@ -1266,9 +1284,7 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
     partition.insert(temp1);
     partition.insert(temp2);
     partition = separateSets(partition, alphabet, transitions);
-    for (auto const &f: partition) {
-        cout << printIntSet(f) << "\n";
-    }
+
     vector <set<int>> finalStates;
     vector <vector <int>> finalTransitions;
     for (auto const &e: partition) {
@@ -1300,45 +1316,93 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
     return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
 }
 
+/*---------------------------------------------------------------------
+ * Function:      checkAlphabet
+ * Purpose:       Compare if the alphabet os the input string is the same of the regular expresion
+ * In arg:        alphaber,alphabet of the regular expresion  chainAlphabet, alphabet of the input string
+ * Return val:    Resulting flag
+ */
+bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
+    bool result = true;
+    for (auto const &e: chainAlphabet) {
+        if (alphabet.find(e) == alphabet.end()){
+            result = false;
+        }
+    }
+    return result;
+}
+
 int main(int argc, char **argv) { 
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
-    cout << expr << "\n";
-    SyntaxTree* tree = new SyntaxTree(expr);
-    cout << "///////////////////////Binary tree/////////////////////// \n";
-    printTree(tree->root, 0);
-    cout << "//////////////////////////////////////////////////////// \n";
-    AFN* afn = new AFN(tree->root);
-    afn->end->id = 9999;
-    writeAFN(afn->start);
     set<string> alphabet = getAlphabet(expr);
-    set<AFNode*> initialState;
-    initialState.insert(afn->start);
-    initialState = lock(initialState);
-    AFD* afd = new AFD(initialState, alphabet);
-    writeAFD(afd);
-    printAFD(afd);
-    vector <set<int>> statesVector;
-    for (int i = 0; i < afd->states.size(); i = i + 1) {
-        statesVector.push_back(setAFNodeToSetInt(afd->states[i]));
+    set<string> chainAlphabet = getAlphabet(chain);
+    if (!correctParentesis(expr)){
+        cout << "Error: Missing parentesis\n";
+        cout << "Check your expression and try again\n";
+        return 0;
     }
-    AFDirect* afdmini = minimization(statesVector, afd->alphabet,afd->transitions, 9999);
-    writeAFDirect(afdmini, "afdmini.txt");
-    printAFDirect(afdmini);
-    expr = expr + ".#";
-    SyntaxTree* syntaxtree = new SyntaxTree(expr);
-    fillFunctions(syntaxtree->root);
-    cout << "///////////////////////Binary tree/////////////////////// \n";
-    printSyntaxTree(syntaxtree->root, 0);
-    cout << "//////////////////////////////////////////////////////// \n";
-    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
-    writeAFDirect(afdirect, "afdirect.txt");
-    printAFDirect(afdirect);
-    AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber('#'));
-    writeAFDirect(afdirectmini, "afdirectmini.txt");
-    printAFDirect(afdirectmini);
-    cout << "Non deterministic finite automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
-    cout << "deterministic finite automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
-    cout << "Direct deterministic finite automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
+    if (!checkAlphabet(alphabet, chainAlphabet)){
+        cout << "Error: The alphabet of the regular expression and the input string are not the same\n";
+        cout << "Check your expression and try again\n";
+        return 0;
+    }
+    try {
+        cout << expr << "\n";
+        SyntaxTree* tree = new SyntaxTree(expr);
+        
+        cout << "///////////////////////Binary tree/////////////////////// \n";
+        printTree(tree->root, 0);
+        cout << "//////////////////////////////////////////////////////// \n";
+        AFN* afn = new AFN(tree->root);
+        afn->end->id = 9999;
+        writeAFN(afn->start);
+        set<AFNode*> initialState;
+        initialState.insert(afn->start);
+        initialState = lock(initialState);
+        AFD* afd = new AFD(initialState, alphabet);
+        writeAFD(afd);
+        printAFD(afd);
+        vector <set<int>> statesVector;
+        for (int i = 0; i < afd->states.size(); i = i + 1) {
+            statesVector.push_back(setAFNodeToSetInt(afd->states[i]));
+        }
+        cout << "///////////////////////Minimization/////////////////////// \n";
+        AFDirect* afdmini = minimization(statesVector, afd->alphabet,afd->transitions, 9999);
+        printAFDirect(afdmini);
+        writeAFDirect(afdmini, "afdmini.txt");
+        expr = '(' + expr + ").#";
+        cout << expr << "\n";
+        SyntaxTree* syntaxtree = new SyntaxTree(expr);
+        fillFunctions(syntaxtree->root);
+        cout << "///////////////////////Binary tree/////////////////////// \n";
+        printSyntaxTree(syntaxtree->root, 0);
+        cout << "//////////////////////////////////////////////////////// \n";
+        AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
+        writeAFDirect(afdirect, "afdirect.txt");
+        printAFDirect(afdirect);
+        cout << "///////////////////////Minimization/////////////////////// \n";
+        AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber('#'));
+        printAFDirect(afdirectmini);
+        writeAFDirect(afdirectmini, "afdirectmini.txt");
+        auto start = high_resolution_clock::now();
+        cout << "Non deterministic finite automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
+        auto stop = high_resolution_clock::now(); 
+        auto duration = duration_cast<microseconds>(stop - start); 
+        cout << "Execution time(microseconds): " << duration.count() << endl; 
+        start = high_resolution_clock::now();
+        cout << "deterministic finite automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
+        stop = high_resolution_clock::now(); 
+        duration = duration_cast<microseconds>(stop - start);
+        cout << "Execution time(microseconds): " << duration.count() << endl;  
+        start = high_resolution_clock::now();
+        cout << "Direct deterministic finite automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
+        stop = high_resolution_clock::now();
+        duration = duration_cast<microseconds>(stop - start); 
+        cout << "Execution time(microseconds): " << duration.count() << endl;  
+    } catch (std::exception& e) {
+        cout << "Error: An error ocurred\n";
+        cout << "Check your expression and try again\n";
+    }
     return 0;
 }
