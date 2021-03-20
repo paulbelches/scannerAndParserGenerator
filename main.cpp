@@ -1350,7 +1350,6 @@ int main(int argc, char **argv) {
     try {
         cout << expr << "\n";
         SyntaxTree* tree = new SyntaxTree(expr);
-        
         cout << "///////////////////////Binary tree/////////////////////// \n";
         printTree(tree->root, 0);
         cout << "//////////////////////////////////////////////////////// \n";
