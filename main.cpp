@@ -30,7 +30,7 @@
  *    c++ main.cpp -o main.run
  * 
  * Usage:
- *    omp_mat_vect <'regular expresion'> <string>
+ *   main.run <'regular expresion'> <string>
  *
  */
 using namespace std::chrono; 
@@ -106,7 +106,7 @@ bool correctParentesis(string expr){
 class Node{
   public:
   int id;
-  char data;
+  string data;
   bool nullable;
   set<Node*> firstpos;
   set<Node*> lastpos;
@@ -117,7 +117,7 @@ class Node{
  * Contructor
  * In arg:        d value of the node, left child, right child
  */
-  Node(char d, Node* left, Node* right){
+  Node(string d, Node* left, Node* right){
     id = rand() % 5000 + 1;
     data=d;
     this->left=left;
@@ -134,20 +134,26 @@ class Node{
 string expand(string expr){
     string r = "";
     int cont = 0;
+    bool operand = 0;
     for (int i = 0; i < expr.length(); i = i + 1){
         if (expr[i] == '|'){
             cont = 0;
+            operand = 0;
         } 
         else if (expr[i] == '('){
             if (cont == 1){
                 r = r + '.';
                 cont = 0;
+                operand = 0;
             }
         } else if (expr[i] == ')' || expr[i] == '*' || expr[i] == '+' || expr[i] == '?'){
-            ;
+            operand = 0;
         }
         else {
-            cont = cont + 1;
+            if (!operand) {
+                operand = 1;
+                cont = cont + 1;
+            }
         }
         if (cont == 2){
             r = r + '.' + expr[i];
@@ -158,33 +164,6 @@ string expand(string expr){
     }
     return r;
 }
-
-/*---------------------------------------------------------------------
- * Function:      printTree
- * Purpose:       Print the syntax tree
- * In arg:        root, a node from the tree, counter, the depth in the tree
- * Return val:    -------
- */
-void printTree(Node* root, int counter){
-    string left = "";
-    string right = "";
-    if (root->left != NULL){
-        Node* leftNode = root->left;
-        left = leftNode->data;
-    } 
-    if (root->right != NULL){
-        Node* rightNode = root->right;
-        right = rightNode->data;
-    } 
-    cout << "(" << counter << ", value: " << root->data << ", left: " << left << ", right: " << right << ")" << "\n";
-    if (root->left != NULL){
-        printTree(root->left, counter + 1);
-    }
-    if (root->right != NULL){
-        printTree(root->right, counter + 1);
-    }
-}
-
 /*---------------------------------------------------------------------
  * Function:      nullable
  * Purpose:       Calculate nullable of a node of the syntax tree
@@ -192,13 +171,13 @@ void printTree(Node* root, int counter){
  * Return val:    Whether is nullable or not
  */
 bool nullable(Node* root){
-    if (root->data == 'e'){
+    if (root->data[0] == '$'){
         return true;
-    } else if (root->data == '|'){
+    } else if (root->data[0] == '|'){
         return nullable(root->left) || nullable(root->right);
-    } else if (root->data == '.'){
+    } else if (root->data[0] == '.'){
         return nullable(root->left) && nullable(root->right);
-    } else if (root->data == '*'){
+    } else if (root->data[0] == '*'){
         return true;
     } else {
         return false;
@@ -213,11 +192,11 @@ bool nullable(Node* root){
 set<Node*> lastpos(Node* root){
     set<Node*> result;
     set<Node*> tempSet;
-    if (root->data == '|'){
+    if (root->data[0] == '|'){
         tempSet = lastpos(root->right);
         result = lastpos(root->left);
         result.insert(tempSet.begin(), tempSet.end());
-    } else if (root->data == '.'){
+    } else if (root->data[0] == '.'){
         if (nullable(root->right)){
             tempSet = lastpos(root->right);
             result = lastpos(root->left);
@@ -225,7 +204,7 @@ set<Node*> lastpos(Node* root){
         } else {
             result = lastpos(root->right);
         }
-    } else if (root->data == '*'){
+    } else if (root->data[0] == '*'){
         result = lastpos(root->left);
     } else {
         result.insert(root);
@@ -241,11 +220,11 @@ set<Node*> lastpos(Node* root){
 set<Node*> firstpos(Node* root){
     set<Node*> result;
     set<Node*> tempSet;
-    if (root->data == '|'){
+    if (root->data[0] == '|'){
         tempSet = firstpos(root->right);
         result = firstpos(root->left);
         result.insert(tempSet.begin(), tempSet.end());
-    } else if (root->data == '.'){
+    } else if (root->data[0] == '.'){
         if (nullable(root->left)){
             tempSet = firstpos(root->right);
             result = firstpos(root->left);
@@ -253,7 +232,7 @@ set<Node*> firstpos(Node* root){
         } else {
             result = firstpos(root->left);
         }
-    } else if (root->data == '*'){
+    } else if (root->data[0] == '*'){
         result = firstpos(root->left);
     } else {
         result.insert(root);
@@ -278,147 +257,6 @@ void fillFunctions(Node* root){
         fillFunctions(root->right);
     }
 }
-
-/*---------------------------------------------------------------------
- * Class:         AFNode
- * Purpose:       Represents a non-deterministic finite automata node
- * Attributes:    
- *      id        The id of the node
- *      edges     The edges comming out of the node
- */
-class AFNode{
-    public:
-    int id;
-    vector <pair<char, AFNode*>> edges;
-    void addEdge(char values, AFNode* node);
-/*---------------------------------------------------------------------
- * Contructor
- * In arg:        -------
- */
-    AFNode(){
-        id = rand() % 5000 + 1;
-    }
-};
-
-/*---------------------------------------------------------------------
- * Function:      addEdge
- * Purpose:       Add an Edge to the non-deterministic finite automata node
- * In arg:        value, the transition values   node, the non-deterministic finite automata node
- * Return val:    -------
- */
-void AFNode::addEdge(char value, AFNode* node){
-    edges.push_back(make_pair(value, node)); 
-}
-/*---------------------------------------------------------------------
- * Class:         AFN
- * Purpose:       Represents a non-deterministic finite automata
- * Attributes:    
- *      start     Starting node
- *      end       Finishing node
- */
-class AFN{  
-    public:
-    AFNode* start;
-    AFNode* end;
-/*---------------------------------------------------------------------
- * Contructor
- * In arg:        root, the root of the syntax tree
- */
-    AFN(Node* root){
-        string empty = "e";
-        AFN* operand1;
-        AFN* operand2;
-        switch(root->data){
-            case '*':
-                start = new AFNode();
-                end = new AFNode();
-                start->addEdge(empty[0], end);
-                operand1 = new AFN(root->left);
-                start->addEdge(empty[0], operand1->start);
-                operand1->end->addEdge(empty[0], end);
-                operand1->end->addEdge(empty[0], operand1->start);
-            break;
-            case '|':
-                start = new AFNode();
-                end = new AFNode();
-                operand1 = new AFN(root->left);
-                operand2 = new AFN(root->right);
-                start->addEdge(empty[0], operand1->start);
-                start->addEdge(empty[0], operand2->start);
-                operand1->end->addEdge(empty[0], end);
-                operand2->end->addEdge(empty[0], end);
-            break;
-            case '.':
-                operand1 = new AFN(root->left);
-                operand2 = new AFN(root->right);
-                operand1->end->edges = operand2->start->edges;
-                operand2->start = operand1->end;
-                start = operand1->start;
-                end = operand2->end;
-            break; //add terminal character
-            case '#':
-                start = new AFNode();
-                end = new AFNode();
-                end->id = 9999;
-                start->addEdge('#', end);
-            break; //add terminal character
-            default:
-                start = new AFNode();
-                end = new AFNode();
-                start->addEdge(root->data, end);
-        }
-    }
-};
-/*---------------------------------------------------------------------
- * Function:      generateSet
- * Purpose:       Generate a set of string cointaining the edges of each node of a non-deterministic finite automata
- * In arg:        start, the non-deterministic finite automata starting node 
- * Return val:    Set of string cointaining the edges of each node 
- */
-set<string> generateSet(AFNode* start){
-    set<string> result;
-    stack<AFNode*> nodes;
-    set<int> checkedNodes;
-    nodes.push(start);
-    checkedNodes.insert(start->id);
-    while (!nodes.empty()){
-        AFNode* temporalNode =  nodes.top();
-        nodes.pop();
-        for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
-            int tnum = temporalNode->edges[i].second->id;
-            if (checkedNodes.find(tnum) == checkedNodes.end()){
-                nodes.push(temporalNode->edges[i].second);
-                checkedNodes.insert(tnum);
-            }
-            string s = to_string(temporalNode->id)+" "+to_string(tnum) +" "+temporalNode->edges[i].first;
-            result.insert(s);
-        }
-    }
-    return result;
-}
-/*---------------------------------------------------------------------
- * Function:      writeAFN
- * Purpose:       Write the non-deterministic finite automata
- * In arg:        start, the non-deterministic finite automata starting node 
- * Return val:    -------
- */
-void writeAFN(AFNode* start){
-    set<string> nodes;
-    nodes = generateSet(start);
-    fstream my_file;
-	my_file.open("thompson.txt", ios::out);
-    //cout << nodes.size() << "\n";
-	if (!my_file) {
-		cout << "File not created!";
-	}
-	else {
-		cout << "File created successfully!" << "\n";
-        for (auto const &e: nodes) {
-            my_file << e << "\n";
-        }
-		my_file.close();
-	}
-}
 /*---------------------------------------------------------------------
  * Function:      getAlphabet
  * Purpose:       Get the alphabet (operands) of a regular expresion
@@ -428,132 +266,21 @@ void writeAFN(AFNode* start){
 set<string> getAlphabet(string s){
     //string nonAlphabet = '.*|()';
     set<string> result;
+    string tempValue = "";
     for (int i=0; i<s.length();i++){
-        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != 'e' && s[i] != '?' && s[i] != '+'){
+        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != '$' && s[i] != '?' && s[i] != '+'){
             string t(1,s[i]);
-            result.insert(t);
+            tempValue = tempValue + t;
+        } else {
+            result.insert(tempValue);
+            tempValue = "";
         }
+    }
+    if (tempValue.size() > 0){
+        result.insert(tempValue);
     }
     return result;
 }
-
-/*---------------------------------------------------------------------
- * Function:      lock
- * Purpose:       Calculate the lock of a set of non/deterministic finite automata nodes
- * In arg:        initialNodes, Set of non/deterministic finite automata nodes
- * Return val:    Resulting  set of non/deterministic finite automata nodes
- */
-set<AFNode*> lock(set<AFNode*> initialNodes){
-    set<AFNode*> result;
-    stack<AFNode*> nodes;
-    set<int> checkedNodes;
-    for (auto const &e: initialNodes) {
-        nodes.push(e);
-        result.insert(e);
-    }
-    while (!nodes.empty()){
-        AFNode* temporalNode =  nodes.top();
-        nodes.pop();
-        for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
-            int tnum = temporalNode->edges[i].second->id;
-            if (temporalNode->edges[i].first == 'e' && checkedNodes.find(tnum) == checkedNodes.end()){
-                result.insert(temporalNode->edges[i].second);
-                nodes.push(temporalNode->edges[i].second);
-                checkedNodes.insert(tnum);
-            }
-        }
-    }
-    return result;
-}
-
-/*---------------------------------------------------------------------
- * Function:      move
- * Purpose:       Calculate the move of a set of non-deterministic finite automata nodes
- * In arg:        initialNodes, Set of non/deterministic finite automata nodes   s, the value of the transition
- * Return val:    Resulting  set of non-deterministic finite automata nodes
- */
-set<AFNode*> move(set<AFNode*> initialNodes, char character){
-    set<AFNode*> result;
-    stack<AFNode*> nodes;
-    for (auto const &e: initialNodes) {
-        nodes.push(e);
-    }
-    while (!nodes.empty()){
-        AFNode* temporalNode =  nodes.top();
-        nodes.pop();
-        for (int i = 0; i < temporalNode->edges.size(); i = i + 1){
-            if (temporalNode->edges[i].first == character){
-                result.insert(temporalNode->edges[i].second);
-                //nodes.push(temporalNode->edges[i].second);
-            }
-        }
-    }
-    return result;
-}
-
-/*---------------------------------------------------------------------
- * Function:      printSet
- * Purpose:       Generate a string from a set of non/deterministic finite automata nodes
- * In arg:        nodes, Set of non/deterministic finite automata nodes
- * Return val:    Resulting string
- */
-string printSet(set<AFNode*> nodes){
-    string result = "";
-    for (auto const &e: nodes) {
-        result = result + to_string(e->id) + " ";
-    }
-    return "{" + result + "} ";
-}
-
-/*---------------------------------------------------------------------
- * Class:           AFN
- * Purpose:         Represents a deterministic finite automata
- * Attributes:    
- *      states      The states of the automata, the vector representes the states in the afd and the set contains the afn states
- *      transitions The transitions of each of the the automata nodes
- *      alphabet    The alphabet of the automata
- */ 
-class AFD{
-    public:
-    //AFDode* start;
-    vector <set<AFNode*>> states;
-    vector <vector <int>> transitions;
-    set<string> alphabet;
-/*---------------------------------------------------------------------
- * Contructor
- * In arg:        start, the afn starting node   alphabet,the alphabet of the automata
- */
-    AFD(set<AFNode*> start, set<string> alphabet){
-        this->alphabet = alphabet;
-        states.push_back(start);
-        queue<set<AFNode*>> pendingStates;
-        pendingStates.push(start);
-        cout << "Initial state" << printSet(pendingStates.front()) << "\n";
-        while (!pendingStates.empty()){
-            vector<int> temporalTransitions;
-            for (auto const &e: alphabet) {
-                set<AFNode*> temporalSet;
-                temporalSet = lock(move(pendingStates.front(), e[0]));
-                cout << printSet(pendingStates.front()) << "-" << e[0] << "->" << printSet(temporalSet) << "\n";
-                int pos = -1;
-                for (int i = 0; i < states.size(); i = i + 1){
-                    if (equal(states[i].begin(), states[i].end(), temporalSet.begin(),temporalSet.end())){
-                        pos = i;
-                    }
-                }
-                if (pos == -1 && temporalSet.size() > 0){
-                    states.push_back(temporalSet);
-                    pos = states.size() - 1;
-                    pendingStates.push(temporalSet);
-                }
-                temporalTransitions.push_back(pos);
-            }
-            transitions.push_back(temporalTransitions);
-            pendingStates.pop();
-        }
-    }
-};
-
 /*---------------------------------------------------------------------
  * Function:      setToString
  * Purpose:       Generate a string from a set of strings 
@@ -563,49 +290,23 @@ class AFD{
 string setToString(set<string> s){
     string result = "";
     for (auto const &e: s) {
-        result = result + e;
+        result = result + e + " ";
     }
     return result;
 }
+
 /*---------------------------------------------------------------------
- * Function:      writeAFD
- * Purpose:       Write the deterministic finite automata
- * In arg:        afd, the  deterministic finite automata
- * Return val:    -------
+ * Function:      setToStringVector
+ * Purpose:       Generate a string vector from a set of strings 
+ * In arg:        s, Set of strings
+ * Return val:    Resulting string vecotr
  */
-void writeAFD(AFD* afd){
-    fstream my_file;
-	my_file.open("afd.txt", ios::out);
-    //cout << nodes.size() << "\n";
-	if (!my_file) {
-		cout << "File not created!";
-	}
-	else {
-		cout << "File created successfully!" << "\n";
-        //write terminal nodes
-        for (int i = 0; i < afd->states.size(); i = i + 1){
-            bool flag = false;
-            for (auto const &e: afd->states[i]) {
-                if (e->id == 9999){
-                    flag = true;
-                }
-            }
-            if (flag){
-                my_file << i << "\n";
-            }
-            
-        }
-        //write transitions
-        string s = setToString(afd->alphabet);
-        for (int i = 0; i < afd->transitions.size(); i = i + 1){
-            for (int j = 0; j < afd->transitions[i].size(); j = j + 1){
-                if (afd->transitions[i][j] != -1){
-                    my_file << i << " "<< afd->transitions[i][j] << " " << s[j] << "\n";
-                }
-            }
-        }
-		my_file.close();
-	}
+vector<string> setToStringVector(set<string> s){
+    vector<string> result;
+    for (auto const &e: s) {
+        result.push_back(e);
+    }
+    return result;
 }
 
 /*---------------------------------------------------------------------
@@ -623,10 +324,15 @@ class SyntaxTree{
  */
   SyntaxTree(string expr){
     stack<char> opStack; 
+    string tempValue = ""; 
     //Read the expression
     string result;
     for (int i = 0; i < expr.length(); i = i + 1){
         if (isOperator(expr[i])){
+            if(tempValue.size() > 0){
+                result =  result + tempValue + "!";
+                tempValue = "";
+            }
             if (opStack.size() == 0){
                 opStack.push(expr[i]);
             } else {
@@ -652,10 +358,13 @@ class SyntaxTree{
                 }
             }
         } else {
-            result = result + expr[i];
+            tempValue = tempValue + expr[i];
         }
     }
-    
+    if(tempValue.size() > 0){
+        result =  result + tempValue + "!";
+        tempValue = "";
+    }
     while (!opStack.empty()){
         result = result + opStack.top();
         opStack.pop();
@@ -669,7 +378,7 @@ class SyntaxTree{
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
-                Node* temp = new Node('*', tree.top(), NULL);
+                Node* temp = new Node("*", tree.top(), NULL);
                 tree.top() = temp;
             } else if (result[i] == '.' || result[i] == '|'){
                 if (tree.size() == 0){
@@ -680,26 +389,32 @@ class SyntaxTree{
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
-                Node* temp = new Node(result[i], tree.top(), firstValue);
+                string value(1, result[i]);
+                Node* temp = new Node(value, tree.top(), firstValue);
                 tree.top() = temp;
             } else if (result[i] == '+'){
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
-                Node* firstValue = new Node('*', tree.top(), NULL);
-                Node* temp = new Node('.', tree.top(), firstValue);
+                Node* firstValue = new Node("*", tree.top(), NULL);
+                Node* temp = new Node(".", tree.top(), firstValue);
                 tree.top() = temp;
             } else if (result[i] == '?'){
                 if (tree.size() == 0){
                     throw std::invalid_argument( " bad expresion received" );
                 }
-                Node* firstValue = new Node('e', NULL, NULL);
-                Node* temp = new Node('|', tree.top(), firstValue);
+                Node* firstValue = new Node("$", NULL, NULL);
+                Node* temp = new Node("|", tree.top(), firstValue);
                 tree.top() = temp;
             }
             //cout << result[i] << "\n";
         } else {
-            tree.push(new Node(result[i], NULL, NULL));
+            if (result[i] == '!'){
+                tree.push(new Node(tempValue, NULL, NULL));
+                tempValue = "";
+            } else {
+                tempValue = tempValue + result[i];
+            }
         }
        //opStack.push(new Node(opStack.top(), NULL, NULL);); 
     }
@@ -776,19 +491,6 @@ set<int> setNodeToSetInt(set<Node*> nodes){
     }
     return result;
 }
-/*---------------------------------------------------------------------
- * Function:      setAFNodeToSetInt
- * Purpose:       Generate a set of ints from a set of non/deterministic finite automata nodes
- * In arg:        nodes, set of nodes
- * Return val:    Resulting set
- */
-set<int> setAFNodeToSetInt(set<AFNode*> nodes){
-    set<int> result;
-    for (auto const &e: nodes) {
-        result.insert(e->id);
-    }
-    return result;
-}
 
 /*---------------------------------------------------------------------
  * Class:           AFDirect
@@ -809,21 +511,22 @@ class AFDirect{
     vector<set<int>> followposV;
     //Reference table
     vector<int> ids;
-    vector<char> leafs;
+    vector<string> leafs;
     //AFDode* start;
     vector <set<int>> states;
     vector <vector <int>> transitions;
     set<string> alphabet;
     void followpos(Node* node);
     set<int> getFollowpos(int id);
-    char getLetter(int id);
-    int getNumber(char letter);
-/*---------------------------------------------------------------------
- * Contructor
- * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
- */
+    string getLetter(int id);
+    int getNumber(string letter);
+    /*---------------------------------------------------------------------
+    * Contructor
+    * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
+    */
     AFDirect(Node* start, set<string> alphabet){
         followpos(start);
+        cout << "alhabet " << setToString(alphabet) << endl;
         this->alphabet = alphabet;
         queue<set<int>> pendingStates;
         states.push_back(setNodeToSetInt(start->firstpos));
@@ -831,10 +534,11 @@ class AFDirect{
         while (!pendingStates.empty()){
             vector<int> temporalTransitions;
             for (auto const &e: alphabet) {
+                cout << e << endl;
                 set<int> newState;
                 set<int> result;
                 for (auto const &h: pendingStates.front()) {
-                    if(getLetter(h) == e[0]){
+                    if(getLetter(h).compare(e) == 0){
                         //cout << h << getLetter(h) << " " << printIntSet(getFollowpos(h)) << "\n";
                         result = getFollowpos(h);
                         newState.insert(result.begin(), result.end());
@@ -869,7 +573,7 @@ class AFDirect{
  *                alphabet, the automata alphabet   ids, the ids of the nodes    leafs, the char value of the nodes
  */
     AFDirect( vector <set<int>> states, vector <vector <int>> transitions, 
-    set<string> alphabet, vector<int> ids, vector<char> leafs){
+    set<string> alphabet, vector<int> ids, vector<string> leafs){
         this->alphabet = alphabet;
         this->states = states;
         this->transitions = transitions;
@@ -891,15 +595,14 @@ void AFDirect::followpos(Node* node){
     while(!pendingnodes.empty()){
         Node* root = pendingnodes.front();
         pendingnodes.pop();
-        if (root->data == '.'){
+        if (root->data[0] == '.'){
             for (auto const &e: lastpos(root->left)) {
                 int pos  = -1;
                 for (int i = 0; i < nodes.size(); i = i + 1){
                     if (e->id == nodes[i]){
                         pos = i;
                     } 
-                }
-                if (pos == -1){
+                }                if (pos == -1){
                     nodes.push_back(e->id);
                     set<int> dummy;
                     followposV.push_back(dummy);
@@ -909,7 +612,7 @@ void AFDirect::followpos(Node* node){
                 followposV[pos].insert(result.begin(), result.end());
             } 
 
-        } else if (root->data == '*'){
+        } else if (root->data[0] == '*'){
             for (auto const &e: root->lastpos) {         
                 int pos  = -1;
                 for (int i = 0; i < nodes.size(); i = i + 1){
@@ -926,10 +629,11 @@ void AFDirect::followpos(Node* node){
                 result = setNodeToSetInt(root->firstpos);
                 followposV[pos].insert(result.begin(), result.end());
             };
-        } else if (root->data != '|'){ //create reference table
+
+        } else if (root->data[0] != '|'){ //create reference table
             int pos  = -1;
             for (int i = 0; i < ids.size(); i = i + 1){
-                if (root->id== ids[i]){
+                if (root->id == ids[i]){
                         pos = i;
                 } 
             }
@@ -971,7 +675,7 @@ set<int> AFDirect::getFollowpos(int id){
  * In arg:        id, id of the node
  * Return val:    nodes letter
  */
-char AFDirect::getLetter(int id){
+string AFDirect::getLetter(int id){
     for (int i = 0; i < ids.size(); i= i +1){
         if (ids[i] == id){
             return leafs[i];
@@ -984,9 +688,9 @@ char AFDirect::getLetter(int id){
  * In arg:        letter, letter of the node
  * Return val:    nodes id
  */
-int AFDirect::getNumber(char letter){
+int AFDirect::getNumber(string letter){
     for (int i = 0; i < leafs.size(); i= i +1){
-        if (leafs[i] == letter){
+        if (leafs[i].compare(letter) == 0){
             return ids[i];
         }
     }
@@ -1008,13 +712,13 @@ void writeAFDirect(AFDirect* afdirect, string name){
 	}
 	else {
 		cout << "File created successfully!" << "\n";
-        int finalNum = afdirect->getNumber('#');
+        int finalNum = afdirect->getNumber("#");
         for (int i = 0; i < afdirect->states.size(); i = i + 1){
             if (afdirect->states[i].find(finalNum) != afdirect->states[i].end()){
                 my_file << i << "\n";
             }
         }
-        string s = setToString(afdirect->alphabet);
+        vector<string> s = setToStringVector(afdirect->alphabet);
         for (int i = 0; i < afdirect->transitions.size(); i = i + 1){
             for (int j = 0; j < afdirect->transitions[i].size(); j = j + 1){
                 if (afdirect->transitions[i][j] != -1){
@@ -1024,40 +728,6 @@ void writeAFDirect(AFDirect* afdirect, string name){
         }
 		my_file.close();
 	}
-}
-/*---------------------------------------------------------------------
- * Function:      printAFD
- * Purpose:       Print in console the deterministic finite automata
- * In arg:        afd, the deterministic finite automata 
- * Return val:    -------
- */
-void printAFD(AFD* afd){
-    cout << "///////////////////////deterministic finite automata/////////////////////// \n";
-    cout << "=========== States =========== \n";
-    for (int i = 0; i <  afd->states.size(); i = i + 1){
-        cout << i << " " << printSet(afd->states[i]) << "\n";
-    }
-    cout << "=============================== \n";
-    cout << "=========== Transitions =========== \n";
-    string s = setToString(afd->alphabet);
-    string trans = "    ";
-    for (int j = 0; j <  s.size(); j = j + 1){
-        trans = trans + s[j] + "   ";
-    }
-    cout << trans << "\n";
-    for (int i = 0; i <  afd->states.size(); i = i + 1){\
-        trans = to_string(i) + "   ";
-        for (int j = 0; j <  s.size(); j = j + 1){
-            if (afd->transitions[i][j] == -1){
-                trans = trans + "-" + "   ";
-            } else {
-                trans = trans + to_string(afd->transitions[i][j]) + "   ";
-            }
-        }
-        cout << trans << "\n";
-    }
-    cout << "=============================== \n";
-    cout << "//////////////////////////////////////////////////////// \n";
 }
 /*---------------------------------------------------------------------
  * Function:      printAFDirect
@@ -1083,15 +753,14 @@ void printAFDirect(AFDirect* afd){
     }
     cout << "=============================== \n";
     cout << "=========== Transitions =========== \n";
-    string s = setToString(afd->alphabet);
     string trans = "    ";
-    for (int j = 0; j <  s.size(); j = j + 1){
-        trans = trans + s[j] + "   ";
+    for (auto const &e: afd->alphabet) {
+        trans = trans + e + "   ";
     }
     cout << trans << "\n";
     for (int i = 0; i <  afd->states.size(); i = i + 1){\
         trans = to_string(i) + "   ";
-        for (int j = 0; j <  s.size(); j = j + 1){
+        for (int j = 0; j <  afd->alphabet.size(); j = j + 1){
             if (afd->transitions[i][j] == -1){
                 trans = trans + "-" + "   ";
             } else {
@@ -1104,59 +773,6 @@ void printAFDirect(AFDirect* afd){
     cout << "//////////////////////////////////////////////////////// \n";
 }
 
-/*---------------------------------------------------------------------
- * Function:      simulateAFN
- * Purpose:       Simulate a non-deterministic finite automata for a input chain
- * In arg:        initialState, the lock of the initial node of the  non-deterministic finite automata     chain, the input chain
- * Return val:    -------
- */
-bool simulateAFN(set<AFNode*> initialState, string chain){
-    bool result = false;
-    set<AFNode*> resultSet = initialState;
-    for (int i = 0; i < chain.size(); i++){
-        resultSet = lock(move(resultSet, chain[i]));
-    }
-    for (auto const &e: resultSet) {
-        if (e->id == 9999) {
-            result = true;
-        }
-    }  
-    return result;
-}
-/*---------------------------------------------------------------------
- * Function:      simulateAFD
- * Purpose:       Simulate a deterministic finite automata for a input chain
- * In arg:        afd, the deterministic finite automata     chain, the input chain
- * Return val:    -------
- */
-bool simulateAFD(AFD* afd, string chain){
-    bool result = false;
-    int currentState = 0;
-    for (int i = 0; i < chain.size(); i++){
-        int cont = 0 ;
-        int transition = -1 ;//check if it does not change
-        for (auto const &e: afd->alphabet) {
-            if (e[0] == chain[i]) {
-                transition = cont;
-            }
-            cont = cont + 1;
-        } 
-        if (transition == -1){
-            return 0;
-        }
-        //cout << currentState << " " << transition << " " << afd->transitions[i].size() << "\n";
-        currentState = afd->transitions[currentState][transition];
-        if (currentState == -1){
-            return 0;
-        }
-    }
-    for (auto const &e: afd->states[currentState]) {
-        if (e->id == 9999) {
-            result = true;
-        }
-    }  
-    return result;
-}
 /*---------------------------------------------------------------------
  * Function:      simulateAFDirect
  * Purpose:       Simulate a direct deterministic finite automata for a input chain
@@ -1183,7 +799,7 @@ bool simulateAFDirect(AFDirect* afd, string chain){
             return 0;
         }
     }
-    int finalNum = afd->getNumber('#');
+    int finalNum = afd->getNumber("#");
     return afd->states[currentState].find(finalNum) != afd->states[currentState].end();
 }
 /*---------------------------------------------------------------------
@@ -1311,9 +927,10 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
 
     vector<int> ids;
     ids.push_back(9999);
-    vector<char> leafs;
-    leafs.push_back('#');
-    return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
+    vector<string> leafs;
+    leafs.push_back("#");
+    //return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
+    return NULL;
 }
 
 /*---------------------------------------------------------------------
@@ -1336,40 +953,20 @@ int main(int argc, char **argv) {
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
     set<string> alphabet = getAlphabet(expr);
-    set<string> chainAlphabet = getAlphabet(chain);
+    //set<string> chainAlphabet = getAlphabet(chain);
+    
     if (!correctParentesis(expr)){
         cout << "Error: Missing parentesis\n";
         cout << "Check your expression and try again\n";
         return 0;
     }
-    if (!checkAlphabet(alphabet, chainAlphabet)){
+    /*if (!checkAlphabet(alphabet, chainAlphabet)){
         cout << "Error: The alphabet of the regular expression and the input string are not the same\n";
         cout << "Check your expression and try again\n";
         return 0;
-    }
+    }*/
     try {
         cout << expr << "\n";
-        SyntaxTree* tree = new SyntaxTree(expr);
-        cout << "///////////////////////Binary tree/////////////////////// \n";
-        printTree(tree->root, 0);
-        cout << "//////////////////////////////////////////////////////// \n";
-        AFN* afn = new AFN(tree->root);
-        afn->end->id = 9999;
-        writeAFN(afn->start);
-        set<AFNode*> initialState;
-        initialState.insert(afn->start);
-        initialState = lock(initialState);
-        AFD* afd = new AFD(initialState, alphabet);
-        writeAFD(afd);
-        printAFD(afd);
-        vector <set<int>> statesVector;
-        for (int i = 0; i < afd->states.size(); i = i + 1) {
-            statesVector.push_back(setAFNodeToSetInt(afd->states[i]));
-        }
-        cout << "///////////////////////Minimization/////////////////////// \n";
-        AFDirect* afdmini = minimization(statesVector, afd->alphabet,afd->transitions, 9999);
-        printAFDirect(afdmini);
-        writeAFDirect(afdmini, "afdmini.txt");
         expr = '(' + expr + ").#";
         cout << expr << "\n";
         SyntaxTree* syntaxtree = new SyntaxTree(expr);
@@ -1377,28 +974,22 @@ int main(int argc, char **argv) {
         cout << "///////////////////////Binary tree/////////////////////// \n";
         printSyntaxTree(syntaxtree->root, 0);
         cout << "//////////////////////////////////////////////////////// \n";
+        
         AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
         writeAFDirect(afdirect, "afdirect.txt");
         printAFDirect(afdirect);
+        
         cout << "///////////////////////Minimization/////////////////////// \n";
-        AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber('#'));
-        printAFDirect(afdirectmini);
-        writeAFDirect(afdirectmini, "afdirectmini.txt");
+        AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
+        //printAFDirect(afdirectmini);
+        //writeAFDirect(afdirectmini, "afdirectmini.txt");
+        /*
         auto start = high_resolution_clock::now();
-        cout << "Non deterministic finite automata: " << (simulateAFN(initialState, chain) ? "approved\n" : "rejected\n");
-        auto stop = high_resolution_clock::now(); 
-        auto duration = duration_cast<microseconds>(stop - start); 
-        cout << "Execution time(microseconds): " << duration.count() << endl; 
-        start = high_resolution_clock::now();
-        cout << "deterministic finite automata: " << (simulateAFD(afd, chain)? "approved\n" : "rejected\n");
-        stop = high_resolution_clock::now(); 
-        duration = duration_cast<microseconds>(stop - start);
-        cout << "Execution time(microseconds): " << duration.count() << endl;  
-        start = high_resolution_clock::now();
         cout << "Direct deterministic finite automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
-        stop = high_resolution_clock::now();
-        duration = duration_cast<microseconds>(stop - start); 
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(stop - start); 
         cout << "Execution time(microseconds): " << duration.count() << endl;  
+        */
     } catch (std::exception& e) {
         cout << "Error: An error ocurred\n";
         cout << "Check your expression and try again\n";
