@@ -30,7 +30,7 @@
  *    c++ main.cpp -o main.run
  * 
  * Usage:
- *   main.run <'regular expresion'> <string>
+ *   main.run <'regular expresion'> <'string'>
  *
  */
 using namespace std::chrono; 
@@ -309,6 +309,17 @@ vector<string> setToStringVector(set<string> s){
     return result;
 }
 
+
+
+string printStack(stack<char> stack){
+    string result = "";
+    while (!stack.empty()){
+        result = result + stack.top();
+        stack.pop();
+    }
+    return result;
+}
+
 /*---------------------------------------------------------------------
  * Class:           SyntaxTree
  * Purpose:         Represents a SyntaxTree
@@ -318,6 +329,7 @@ vector<string> setToStringVector(set<string> s){
 class SyntaxTree{
   public:
   Node* root;
+  void join(Node* tree);
 /*---------------------------------------------------------------------
  * Contructor
  * In arg:        expr, the regular expresion
@@ -328,6 +340,7 @@ class SyntaxTree{
     //Read the expression
     string result;
     for (int i = 0; i < expr.length(); i = i + 1){
+        //cout << expr[i] << endl;
         if (isOperator(expr[i])){
             if(tempValue.size() > 0){
                 result =  result + tempValue + "!";
@@ -336,16 +349,17 @@ class SyntaxTree{
             if (opStack.size() == 0){
                 opStack.push(expr[i]);
             } else {
-                if (precedence(expr[i]) > precedence(opStack.top())) {
-                    opStack.push(expr[i]);
-                } else if (expr[i] == '(') {
+                if (expr[i] == '(') {
                     opStack.push(expr[i]);
                 } else if (expr[i] == ')') {
                     while (opStack.top() != '('){
+                        cout << result << " stack: " << printStack(opStack) << endl;
                         result = result + opStack.top();
                         opStack.pop();
                     }
                     opStack.pop();
+                 }else if (precedence(expr[i]) > precedence(opStack.top())) {
+                    opStack.push(expr[i]);
                 } else {
                     while (precedence(expr[i]) <= precedence(opStack.top())){
                         result = result + opStack.top();
@@ -365,6 +379,7 @@ class SyntaxTree{
         result =  result + tempValue + "!";
         tempValue = "";
     }
+    cout << result << endl;
     while (!opStack.empty()){
         result = result + opStack.top();
         opStack.pop();
@@ -423,6 +438,17 @@ class SyntaxTree{
     root = tree.top();
   }
 };
+
+/*---------------------------------------------------------------------
+ * Function:      join
+ * Purpose:       Joins 2 syntax trees
+ * In arg:        tree, syntax tree to join with
+ * Return val:    -------
+ */
+
+void SyntaxTree::join(Node* tree){
+    root = new Node("|", root, tree);
+}
 
 /*---------------------------------------------------------------------
  * Function:      printNode
@@ -516,25 +542,32 @@ class AFDirect{
     vector <set<int>> states;
     vector <vector <int>> transitions;
     set<string> alphabet;
+    vector<int> finalids;
+    vector<string> expressions;
+    //Methods
+    bool isTerminal(int currentState);
     void followpos(Node* node);
     set<int> getFollowpos(int id);
     string getLetter(int id);
     int getNumber(string letter);
+    void simulate(string chain);
     /*---------------------------------------------------------------------
     * Contructor
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
     */
-    AFDirect(Node* start, set<string> alphabet){
+    AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions){
         followpos(start);
-        cout << "alhabet " << setToString(alphabet) << endl;
+       // cout << "alhabet " << setToString(alphabet) << endl;
+        this->finalids = finalids;
         this->alphabet = alphabet;
+        this->expressions = expressions;
         queue<set<int>> pendingStates;
         states.push_back(setNodeToSetInt(start->firstpos));
         pendingStates.push(setNodeToSetInt(start->firstpos));
         while (!pendingStates.empty()){
             vector<int> temporalTransitions;
             for (auto const &e: alphabet) {
-                cout << e << endl;
+                //cout << e << endl;
                 set<int> newState;
                 set<int> result;
                 for (auto const &h: pendingStates.front()) {
@@ -572,7 +605,7 @@ class AFDirect{
  * In arg:        states, the states of the automata, transitions, the transitions of the automata
  *                alphabet, the automata alphabet   ids, the ids of the nodes    leafs, the char value of the nodes
  */
-    AFDirect( vector <set<int>> states, vector <vector <int>> transitions, 
+AFDirect( vector <set<int>> states, vector <vector <int>> transitions, 
     set<string> alphabet, vector<int> ids, vector<string> leafs){
         this->alphabet = alphabet;
         this->states = states;
@@ -698,12 +731,74 @@ int AFDirect::getNumber(string letter){
 }
 
 /*---------------------------------------------------------------------
+ * Function:      isTerminal
+ * Purpose:       Check is a state is a terminal state
+ * In arg:        currentState, the state to be checked
+ * Return val:    -------
+ */
+bool AFDirect::isTerminal(int currentState){
+    for (int j = 0; j < finalids.size(); j = j + 1){
+        int finalNum = finalids[j];
+        if (states[currentState].find(finalNum) != states[currentState].end()){
+            return true;
+        }
+    }
+    return false;
+}
+
+/*---------------------------------------------------------------------
+ * Function:      simulate
+ * Purpose:       Simulate a direct deterministic finite automata for a input chain
+ * In arg:        afd, the direct deterministic finite automata     chain, the input chain
+ * Return val:    -------
+ */
+void AFDirect::simulate(string chain){
+    int currentState = 0;
+    string readCharacters = "";
+    int i = 0;
+    while (i < chain.size()){
+        int cont = 0 ;
+        int transition = -1 ;//check if it does not change
+        //Make transition
+        for (auto const &e: alphabet) {
+            if (e[0] == chain[i]) {
+                transition = cont;
+            }
+            cont = cont + 1;
+        } 
+        //The character read had was not from the aplhabet
+        if (transition == -1){
+            cout << "Error en la cadena ingresada" << endl;
+            break;
+        }
+        //The character read had no existing transition
+        if (transitions[currentState][transition] == -1){
+            if (this->isTerminal(currentState)){
+                cout << "Se identifico un token para " << readCharacters << endl;
+                currentState = 0;
+                readCharacters = "";
+            } else {
+                cout << "Error en la cadena ingresada" << endl;
+                break;
+            }
+        } else {
+            currentState = transitions[currentState][transition];
+            readCharacters = readCharacters + chain[i];
+            i = i + 1;
+        }
+    }
+    if (this->isTerminal(currentState)){
+        cout << "Se identifico un token para " << readCharacters << endl;
+    }
+    cout << readCharacters << endl;
+}
+/*---------------------------------------------------------------------
  * Function:      writeAFDirect
  * Purpose:       Write the direct deterministic finite automata
  * In arg:        afdirect, the direct deterministic finite automata       name, the name of the file
  * Return val:    -------
  */
-void writeAFDirect(AFDirect* afdirect, string name){
+void writeAFDirect(AFDirect* afdirect, string name){ //, vector<int> finalNumers){
     fstream my_file;
 	my_file.open(name, ios::out);
     //cout << nodes.size() << "\n";
@@ -712,10 +807,12 @@ void writeAFDirect(AFDirect* afdirect, string name){
 	}
 	else {
 		cout << "File created successfully!" << "\n";
-        int finalNum = afdirect->getNumber("#");
-        for (int i = 0; i < afdirect->states.size(); i = i + 1){
-            if (afdirect->states[i].find(finalNum) != afdirect->states[i].end()){
-                my_file << i << "\n";
+        for (int j = 0; j < afdirect->finalids.size(); j = j + 1){
+            int finalNum = afdirect->finalids[j];
+            for (int i = 0; i < afdirect->states.size(); i = i + 1){
+                if (afdirect->states[i].find(finalNum) != afdirect->states[i].end()){
+                    my_file << i << "\n";
+                }
             }
         }
         vector<string> s = setToStringVector(afdirect->alphabet);
@@ -773,35 +870,6 @@ void printAFDirect(AFDirect* afd){
     cout << "//////////////////////////////////////////////////////// \n";
 }
 
-/*---------------------------------------------------------------------
- * Function:      simulateAFDirect
- * Purpose:       Simulate a direct deterministic finite automata for a input chain
- * In arg:        afd, the direct deterministic finite automata     chain, the input chain
- * Return val:    -------
- */
-bool simulateAFDirect(AFDirect* afd, string chain){
-    bool result = false;
-    int currentState = 0;
-    for (int i = 0; i < chain.size(); i++){
-        int cont = 0 ;
-        int transition = -1 ;//check if it does not change
-        for (auto const &e: afd->alphabet) {
-            if (e[0] == chain[i]) {
-                transition = cont;
-            }
-            cont = cont + 1;
-        } 
-        if (transition == -1){
-            return 0;
-        }
-        currentState = afd->transitions[currentState][transition];
-        if (currentState == -1){
-            return 0;
-        }
-    }
-    int finalNum = afd->getNumber("#");
-    return afd->states[currentState].find(finalNum) != afd->states[currentState].end();
-}
 /*---------------------------------------------------------------------
  * Function:      setIntToVectorInt
  * Purpose:       Generate a vector of ints from a set of ints
@@ -897,8 +965,12 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
         }
     }
     set<set<int>> partition;
-    partition.insert(temp1);
-    partition.insert(temp2);
+    if (temp1.size() > 0){
+        partition.insert(temp1);
+    }
+    if (temp2.size() > 0){
+        partition.insert(temp2);
+    }
     partition = separateSets(partition, alphabet, transitions);
 
     vector <set<int>> finalStates;
@@ -929,8 +1001,8 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
     ids.push_back(9999);
     vector<string> leafs;
     leafs.push_back("#");
-    //return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
-    return NULL;
+    return new AFDirect(finalStates, finalTransitions, alphabet, ids, leafs);
+    //return NULL;
 }
 
 /*---------------------------------------------------------------------
@@ -950,6 +1022,38 @@ bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
 }
 
 int main(int argc, char **argv) { 
+    vector<string> expressions;
+    vector<int> finalids;
+
+    expressions.push_back("a(b(a))+");
+    expressions.push_back("a(b)*a");
+    expressions.push_back("(a|b)");
+    
+
+    string expr = expand(expressions[0]);
+    cout << expr << endl;
+    
+    set<string> alphabet = getAlphabet(expr);
+    expr = '(' + expr + ").#";
+    SyntaxTree* syntaxtree = new SyntaxTree(expr);
+    finalids.push_back(syntaxtree->root->right->id);
+    for (int i = 1; i < expressions.size(); i = i + 1){
+        string expr = expand(expressions[i]);
+        set<string> tempAlphabet = getAlphabet(expr);
+        alphabet.insert(tempAlphabet.begin(), tempAlphabet.end());
+        expr = '(' + expr + ").#";
+        SyntaxTree* tempsyntaxtree = new SyntaxTree(expr);
+        finalids.push_back(tempsyntaxtree->root->right->id);
+        syntaxtree->join(tempsyntaxtree->root);
+    }
+    fillFunctions(syntaxtree->root);
+    printSyntaxTree(syntaxtree->root, 0);
+
+    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions);
+    writeAFDirect(afdirect, "afdirect.txt");
+    printAFDirect(afdirect);  
+    afdirect->simulate("abaabbabaa");
+    /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
     set<string> alphabet = getAlphabet(expr);
@@ -965,6 +1069,7 @@ int main(int argc, char **argv) {
         cout << "Check your expression and try again\n";
         return 0;
     }*/
+    /*
     try {
         cout << expr << "\n";
         expr = '(' + expr + ").#";
@@ -981,8 +1086,8 @@ int main(int argc, char **argv) {
         
         cout << "///////////////////////Minimization/////////////////////// \n";
         AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
-        //printAFDirect(afdirectmini);
-        //writeAFDirect(afdirectmini, "afdirectmini.txt");
+        printAFDirect(afdirectmini);
+        writeAFDirect(afdirectmini, "afdirectmini.txt");
         /*
         auto start = high_resolution_clock::now();
         cout << "Direct deterministic finite automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
@@ -990,9 +1095,10 @@ int main(int argc, char **argv) {
         auto duration = duration_cast<microseconds>(stop - start); 
         cout << "Execution time(microseconds): " << duration.count() << endl;  
         */
+       /*
     } catch (std::exception& e) {
         cout << "Error: An error ocurred\n";
         cout << "Check your expression and try again\n";
-    }
+    }*/
     return 0;
 }
