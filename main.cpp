@@ -135,12 +135,17 @@ string expand(string expr){
     string r = "";
     int cont = 0;
     bool operand = 0;
+    bool readingString = false;
     for (int i = 0; i < expr.length(); i = i + 1){
-        if (expr[i] == '|'){
+        if (readingString){
+            if (expr[i] == '"'){
+                readingString = false;
+                cont = 1;
+            }
+        } else if (expr[i] == '|'){
             cont = 0;
             operand = 0;
-        } 
-        else if (expr[i] == '('){
+        } else if (expr[i] == '('){
             if (cont == 1){
                 r = r + '.';
                 cont = 0;
@@ -148,8 +153,10 @@ string expand(string expr){
             }
         } else if (expr[i] == ')' || expr[i] == '*' || expr[i] == '+' || expr[i] == '?'){
             operand = 0;
-        }
-        else {
+        } else if (expr[i] == '"'){
+            readingString = true;
+            cont = cont + 1;
+        } else {
             if (!operand) {
                 operand = 1;
                 cont = cont + 1;
@@ -267,12 +274,18 @@ set<string> getAlphabet(string s){
     //string nonAlphabet = '.*|()';
     set<string> result;
     string tempValue = "";
+    bool readingString = false;
     for (int i=0; i<s.length();i++){
-        if (s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != '$' && s[i] != '?' && s[i] != '+'){
+        if ((s[i] != '.' && s[i] != '*' && s[i] != '|' && s[i] != '(' && s[i] != ')' && s[i] != '$' && s[i] != '?' && s[i] != '+') || readingString) {
+            if (s[i] == '"') {
+                readingString = readingString ? false : true;
+            }
             string t(1,s[i]);
             tempValue = tempValue + t;
         } else {
-            result.insert(tempValue);
+            if (tempValue.size()>0) {
+                result.insert(tempValue);
+            }
             tempValue = "";
         }
     }
@@ -309,8 +322,6 @@ vector<string> setToStringVector(set<string> s){
     return result;
 }
 
-
-
 string printStack(stack<char> stack){
     string result = "";
     while (!stack.empty()){
@@ -337,13 +348,19 @@ class SyntaxTree{
   SyntaxTree(string expr){
     stack<char> opStack; 
     string tempValue = ""; 
+    bool readingString = false;
     //Read the expression
-    string result;
+    vector<string> result;
     for (int i = 0; i < expr.length(); i = i + 1){
         //cout << expr[i] << endl;
-        if (isOperator(expr[i])){
+        if (readingString){
+            if (expr[i] == '"'){
+                readingString = false;
+            }
+            tempValue = tempValue + expr[i];
+        } else if (isOperator(expr[i])){
             if(tempValue.size() > 0){
-                result =  result + tempValue + "!";
+                result.push_back(tempValue);
                 tempValue = "";
             }
             if (opStack.size() == 0){
@@ -353,8 +370,9 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 } else if (expr[i] == ')') {
                     while (opStack.top() != '('){
-                        cout << result << " stack: " << printStack(opStack) << endl;
-                        result = result + opStack.top();
+                        //cout << result << " stack: " << printStack(opStack) << endl;
+                        string s(1,opStack.top());
+                        result.push_back(s);
                         opStack.pop();
                     }
                     opStack.pop();
@@ -362,7 +380,8 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 } else {
                     while (precedence(expr[i]) <= precedence(opStack.top())){
-                        result = result + opStack.top();
+                        string s(1,opStack.top());
+                        result.push_back(s);
                         opStack.pop();
                         if (opStack.empty()) {
                             break;
@@ -371,31 +390,35 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 }
             }
+        }  else if (expr[i] == '"'){
+            readingString = true;
+            tempValue = tempValue  + expr[i];
         } else {
             tempValue = tempValue + expr[i];
         }
     }
     if(tempValue.size() > 0){
-        result =  result + tempValue + "!";
+        result.push_back(tempValue);
         tempValue = "";
     }
-    cout << result << endl;
+    //cout << result << endl;
     while (!opStack.empty()){
-        result = result + opStack.top();
+        string s(1,opStack.top());
+        result.push_back(s);
         opStack.pop();
     }
-    cout << "result:" << result << "\n";
+
     stack<Node*> tree;
     for (int i=0; i < result.size(); i=i+1){
-        if (isOperator(result[i])){
-            if (result[i] == '*'){
+        if (isOperator(result[i][0])){
+            if (result[i][0] == '*'){
                 //cout << tree.front()->data << "\n";
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
                 Node* temp = new Node("*", tree.top(), NULL);
                 tree.top() = temp;
-            } else if (result[i] == '.' || result[i] == '|'){
+            } else if (result[i][0] == '.' || result[i][0] == '|'){
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
@@ -404,17 +427,17 @@ class SyntaxTree{
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
-                string value(1, result[i]);
+                string value(1, result[i][0]);
                 Node* temp = new Node(value, tree.top(), firstValue);
                 tree.top() = temp;
-            } else if (result[i] == '+'){
+            } else if (result[i][0] == '+'){
                 if (tree.size() == 0){
                     throw std::invalid_argument( "bad expresion received" );
                 }
                 Node* firstValue = new Node("*", tree.top(), NULL);
                 Node* temp = new Node(".", tree.top(), firstValue);
                 tree.top() = temp;
-            } else if (result[i] == '?'){
+            } else if (result[i][0] == '?'){
                 if (tree.size() == 0){
                     throw std::invalid_argument( " bad expresion received" );
                 }
@@ -422,14 +445,9 @@ class SyntaxTree{
                 Node* temp = new Node("|", tree.top(), firstValue);
                 tree.top() = temp;
             }
-            //cout << result[i] << "\n";
+            //cout << result[i][0] << "\n";
         } else {
-            if (result[i] == '!'){
-                tree.push(new Node(tempValue, NULL, NULL));
-                tempValue = "";
-            } else {
-                tempValue = tempValue + result[i];
-            }
+            tree.push(new Node(result[i], NULL, NULL));
         }
        //opStack.push(new Node(opStack.top(), NULL, NULL);); 
     }
@@ -1005,7 +1023,10 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
     //return NULL;
 }
 
-/*---------------------------------------------------------------------
+/*---------------------------------            if (tempValue.size()>0) {
+                result.insert(tempValue);
+            }
+            tempValue = "";------------------------------------
  * Function:      checkAlphabet
  * Purpose:       Compare if the alphabet os the input string is the same of the regular expresion
  * In arg:        alphaber,alphabet of the regular expresion  chainAlphabet, alphabet of the input string
@@ -1025,17 +1046,17 @@ int main(int argc, char **argv) {
     vector<string> expressions;
     vector<int> finalids;
 
-    expressions.push_back("a(b(a))+");
-    expressions.push_back("a(b)*a");
-    expressions.push_back("(a|b)");
+    expressions.push_back("(letter(letter)*)|(letter)");
+    expressions.push_back("digit(digit)*");
+    expressions.push_back("hexdigit(hexdigit)*\"(H)\"");
     
 
     string expr = expand(expressions[0]);
     cout << expr << endl;
-    
     set<string> alphabet = getAlphabet(expr);
     expr = '(' + expr + ").#";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
+
     finalids.push_back(syntaxtree->root->right->id);
     for (int i = 1; i < expressions.size(); i = i + 1){
         string expr = expand(expressions[i]);
@@ -1048,11 +1069,10 @@ int main(int argc, char **argv) {
     }
     fillFunctions(syntaxtree->root);
     printSyntaxTree(syntaxtree->root, 0);
-
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions);
     writeAFDirect(afdirect, "afdirect.txt");
     printAFDirect(afdirect);  
-    afdirect->simulate("abaabbabaa");
+    //afdirect->simulate("abaabbabaa");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
