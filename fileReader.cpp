@@ -26,6 +26,18 @@ using namespace std;
  *
  */
 
+const string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "IGNORE", "PRODUCTIONS", "END"};
+
+
+int isKeyWord(string line, int cont, const string keywords[]){
+  //change the 6
+  for (int i = 0; i < 6; i++){
+    if (line.substr(cont,keywords[i].size()).compare(keywords[i]) == 0){
+      return i;
+    }
+  }
+  return -1;
+}
 
 string replaceTerm(string line, char patron, string newPatron){
   bool readingString = false;
@@ -140,8 +152,8 @@ int main () {
   map<string,string> savedKeywords;
   map<string,string> savedCharacters;
   map<string,string> savedTokens;
+  vector<string> whiteSpaces;
 
-  string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "PRODUCTIONS", "END"};
   int currentKeyword = 0;
   bool readingString = false;
   bool readingChar = false;
@@ -164,11 +176,12 @@ int main () {
       //cout << line << endl;
       while (line.size() > cont){
         // check for key word
-        if (line.substr(cont,keywords[currentKeyword].size()).compare(keywords[currentKeyword]) == 0){
-          cout << "clave ";
-          cout << line.substr(cont,keywords[currentKeyword].size()) << endl;
+        int tempCurrentKeyword = isKeyWord(line, cont, keywords);
+        if (tempCurrentKeyword > 0){
+          //check if the temp is lower than the actual, if that is the case, return errror
+          currentKeyword = tempCurrentKeyword;
           cont = cont + keywords[currentKeyword].size() - 1;
-          currentKeyword++;
+          //currentKeyword++;
         } else if (readingChar && line[cont] != '\''){
           acum = acum + line[cont];
         } else if (readingString && line[cont] != '"'){
@@ -198,7 +211,8 @@ int main () {
           terms.push_back(acum);
           acum = "";
           switch(currentKeyword) {
-              case 2:
+              case 1:
+              case 4:
                 while (operands.size() > 0){
                   if (operands[operands.size() - 1] == '+'){
                     terms[terms.size() - 2] = join(terms[terms.size() - 2], terms[terms.size() - 1], savedCharacters);
@@ -213,16 +227,26 @@ int main () {
                     //error
                   }
                 }
-                if (terms.size() == 2){
-                  savedCharacters[terms[0]] = terms[1];
+                if (currentKeyword == 1) {
+                  if (terms.size() == 2){
+                    savedCharacters[terms[0]] = terms[1];
+                  } else {
+                    cout << "Error" << endl;
+                  } 
+                } else {
+                  if (terms.size() == 1){
+                    whiteSpaces.push_back(terms[0]);
+                  }  else {
+                    cout << "Error" << endl;
+                  } 
                 }
                 break;
-              case 3:
+              case 2:
                 if (terms.size() == 2){
                   savedKeywords[terms[0]] = terms[1];
-                }
+                } 
                 break;
-              case 4:
+              case 3:
                 while (operands.size() > 0){
                   if (operands[operands.size() - 1] == '|'){
                     terms[terms.size() - 2] =  "(" + terms[terms.size() - 2] + ")|(" + terms[terms.size() - 1] + ")";
@@ -247,10 +271,6 @@ int main () {
                   savedTokens[terms[0]] = terms[1];
 
                 }
-                /*
-                for(int i = 0; i < terms.size(); i++){
-                  cout << "term No." << i << " " << replaceTerm(terms[i], '{', "[") << endl;
-                }*/
                 break;
           }
           terms.clear();
@@ -280,6 +300,10 @@ int main () {
   for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it)
   {
       std::cout << it->first << " " << it->second << "\n";
+  }
+   for(int i = 0; i < whiteSpaces.size(); i++)
+  {
+      cout << whiteSpaces[i] << endl;
   }
 
   return 0;
