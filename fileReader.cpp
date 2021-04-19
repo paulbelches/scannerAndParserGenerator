@@ -28,7 +28,6 @@ using namespace std;
 
 const string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "IGNORE", "PRODUCTIONS", "END"};
 
-
 int isKeyWord(string line, int cont, const string keywords[]){
   //change the 6
   for (int i = 0; i < 6; i++){
@@ -73,6 +72,42 @@ string replaceTerm(string line, char patron, string newPatron){
   return result;
 }
 
+string replaceString(string line, string patron, string newPatron){
+  bool readingString = false;
+  bool readingChar = false;
+  string result = "";
+  int i = 0;
+  while (i < line.size()){
+    if (readingString){
+      if (line[i] == '"'){
+        readingString = false;
+      }
+      result = result + line[i];
+    }
+    else if (readingChar){
+      if (line[i] == '\''){
+        readingChar= false;
+      }
+      result = result + line[i];
+    }
+    else if (line[i] == '"'){
+      readingString = true;
+      result = result + line[i];
+    }
+    else if (line[i] == '\''){
+      readingString = true;
+      result = result + line[i];
+    }
+    else if ((line.size() - i >= patron.size() ) && line.substr(i,patron.size()).compare(patron) == 0){
+      result = result + newPatron;
+      i = i + patron.size() - 1;
+    } else {
+      result = result + line[i];
+    }
+    i++;
+  }
+  return result;
+}
 
 //Add Validation
 string sustituteChar(string line){
@@ -143,6 +178,15 @@ string remove(string s1, string s2, map<string, string>& references){
     }
   }
   return "\"" + s1 + "\"";
+}
+
+string generateSetOfOrs(string set){
+  string result = "";
+  result = result + "(\"" + set[1] + "\"";
+  for (int i = 2; i < set.size() - 1; i++){
+    result= result + "|\"" + set[i] + "\"";
+  }
+  return result + ")";
 }
 
 int main () {
@@ -258,7 +302,7 @@ int main () {
                 }
                 if (terms.size() == 2){
                   size_t firstPosition = terms[1].find("{");
-                  cout << terms[1] << endl;
+                  //cout << terms[1] << endl;
                   if (firstPosition != string::npos) {
                     terms[1] = replaceTerm(terms[1], '{', "(");
                     terms[1] = replaceTerm(terms[1], '}', ")*");
@@ -267,6 +311,11 @@ int main () {
                   if (firstPosition != string::npos) {
                     terms[1] = replaceTerm(terms[1], '[', "(");
                     terms[1] = replaceTerm(terms[1], ']', ")+");
+                  }
+                  //Eliminate chars
+                  firstPosition = terms[1].find("'");
+                  if (firstPosition != string::npos) {
+                    terms[1] = replaceTerm(terms[1], '\'', "\"");
                   }
                   savedTokens[terms[0]] = terms[1];
 
@@ -288,23 +337,56 @@ int main () {
   }
   else cout << "Unable to open file"; 
 
+  
+
+
   /* Print generated maps */
+  /*
   for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it)
   {
       std::cout << it->first << " " << it->second << "\n";
+  }*/
+
+
+  for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
+    //cout << it->first << " " << it->second << endl;
+    
+    string tokenId = it->first;
+    string token = it->second;
+    string word = "";
+    bool didChange = true;
+    while (didChange){
+      didChange = false;
+      string keyword;
+      string content;
+      for(auto it2 = savedCharacters.cbegin(); it2 != savedCharacters.cend(); ++it2)
+      {
+        keyword = it2->first;
+        content = it2->second;
+        if (token.find(keyword) != string::npos && keyword.size() > word.size()){
+          word = keyword;
+          didChange = true;
+        }
+      }
+      if (word.size() > 0){
+        token = replaceString(token, word, generateSetOfOrs(savedCharacters[word]));
+        savedTokens[tokenId] = token;
+        //cout << word << " " << token << endl;
+        word = "";
+      }
+    }
+    //cout << it->first << " " << it->second << endl;
   }
-  for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it)
-  {
-      std::cout << it->first << " " << it->second << "\n";
+
+  for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
+    cout << it->first << " " << it->second << endl;
   }
-  for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it)
-  {
-      std::cout << it->first << " " << it->second << "\n";
-  }
+
+  /*
    for(int i = 0; i < whiteSpaces.size(); i++)
   {
       cout << whiteSpaces[i] << endl;
-  }
+  }*/
 
   return 0;
 }

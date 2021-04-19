@@ -758,6 +758,7 @@ bool AFDirect::isTerminal(int currentState){
     for (int j = 0; j < finalids.size(); j = j + 1){
         int finalNum = finalids[j];
         if (states[currentState].find(finalNum) != states[currentState].end()){
+            //cout << "AAAAAAAAAAAAAAAAAAAAAAA" << endl;
             return true;
         }
     }
@@ -777,19 +778,28 @@ void AFDirect::simulate(string chain){
     while (i < chain.size()){
         int cont = 0 ;
         int transition = -1 ;//check if it does not change
+        int subStringlength = -1 ;//check if it does not change
         //Make transition
         for (auto const &e: alphabet) {
-            if (e[0] == chain[i]) {
-                transition = cont;
-            }
+            if (e[0] == '"' && e[e.size() - 1] == '"'){
+                string transitionValue = e.substr(1, e.size()- 2);
+                string subchain = chain.substr(i, transitionValue.size());
+                if (  equal(transitionValue.begin(), transitionValue.end(), subchain.begin(), subchain.end())  ){
+                    /*cout << " string " << endl; 
+                    cout << e.substr(1, e.size()- 2) << " " << endl; */
+                    transition = cont;
+                    subStringlength = subchain.size();
+                }
+            } 
             cont = cont + 1;
-        } 
+        }
         //The character read had was not from the aplhabet
         if (transition == -1){
             cout << "Error en la cadena ingresada" << endl;
             break;
         }
         //The character read had no existing transition
+        
         if (transitions[currentState][transition] == -1){
             if (this->isTerminal(currentState)){
                 cout << "Se identifico un token para " << readCharacters << endl;
@@ -801,14 +811,19 @@ void AFDirect::simulate(string chain){
             }
         } else {
             currentState = transitions[currentState][transition];
-            readCharacters = readCharacters + chain[i];
-            i = i + 1;
+            readCharacters = readCharacters + chain.substr(i, subStringlength);;
+            i = i + subStringlength;
         }
     }
+    cout << currentState << endl;
     if (this->isTerminal(currentState)){
         cout << "Se identifico un token para " << readCharacters << endl;
     }
     cout << readCharacters << endl;
+    //borrar
+    /*
+    i = chain.size();
+    }*/
 }
 /*---------------------------------------------------------------------
  * Function:      writeAFDirect
@@ -1045,11 +1060,20 @@ bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
 int main(int argc, char **argv) { 
     vector<string> expressions;
     vector<int> finalids;
+    map<string,string> savedCharacters;
 
-    expressions.push_back("(letter(letter)*)|(letter)");
-    expressions.push_back("digit(digit)*");
-    expressions.push_back("hexdigit(hexdigit)*\"(H)\"");
-    
+    //Regular expresions
+    //expressions.push_back("((A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)((A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z))*)|((A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z))");
+    expressions.push_back("(\"+\"|\"1\"|\"2\"|\"3\"|\"4\"|\"5\"|\"6\"|\"7\"|\"8\"|\"9\")((\"0\"|\"1\"|\"2\"|\"3\"|\"4\"|\"5\"|\"6\"|\"7\"|\"8\"|\"9\"))*");
+    expressions.push_back("(\"A\"|\"B\"|\"C\"|\"D\"|\"E\"|\"F\"|\"0\"|\"1\"|\"2\"|\"3\"|\"4\"|\"5\"|\"6\"|\"7\"|\"8\"|\"9\")((\"A\"|\"B\"|\"C\"|\"D\"|\"E\"|\"F\"|\"0\"|\"1\"|\"2\"|\"3\"|\"4\"|\"5\"|\"6\"|\"7\"|\"8\"|\"9\"))*\"(H)\"");
+    //Saved Characters
+    //savedCharacters["digit"] = "(A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z)";
+
+/*
+    savedCharacters["digit"] = "0123456789";    
+    savedCharacters["hexdigit"] = "ABCDEF0123456789";
+    savedCharacters["letter"] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+*/
 
     string expr = expand(expressions[0]);
     cout << expr << endl;
@@ -1071,8 +1095,12 @@ int main(int argc, char **argv) {
     printSyntaxTree(syntaxtree->root, 0);
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions);
     writeAFDirect(afdirect, "afdirect.txt");
-    printAFDirect(afdirect);  
-    //afdirect->simulate("abaabbabaa");
+    printAFDirect(afdirect); 
+    /* 
+    AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
+    printAFDirect(afdirectmini);
+    writeAFDirect(afdirectmini, "afdirectmini.txt");*/
+    afdirect->simulate("DBAABBABBAA");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
