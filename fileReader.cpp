@@ -26,6 +26,8 @@ using namespace std;
  *
  */
 
+const string flag = "    //INSERT EXPRESSIONS";
+
 const string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "IGNORE", "PRODUCTIONS", "END"};
 
 int isKeyWord(string line, int cont, const string keywords[]){
@@ -65,6 +67,18 @@ string replaceTerm(string line, char patron, string newPatron){
     }
     else if (line[i] == patron){
       result = result + newPatron;
+    } else {
+      result = result + line[i];
+    }
+  }
+  return result;
+}
+
+string replaceQuotes(string line){
+  string result = "";
+  for (int i = 0; i < line.size(); i++){
+    if (line[i] == '"'){
+      result = result + "\\\"";
     } else {
       result = result + line[i];
     }
@@ -182,29 +196,22 @@ string remove(string s1, string s2, map<string, string>& references){
 
 string generateSetOfOrs(string set){
   string result = "";
-  result = result + "(\"" + set[1] + "\"";
+  result = result + "('" + set[1] + "'";
   for (int i = 2; i < set.size() - 1; i++){
-    result= result + "|\"" + set[i] + "\"";
+    result= result + "|'" + set[i] + "'";
   }
   return result + ")";
 }
 
-int main () {
+void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, vector<string>& whiteSpaces){
   string line;
   ifstream myfile;
-
-  map<string,string> savedKeywords;
-  map<string,string> savedCharacters;
-  map<string,string> savedTokens;
-  vector<string> whiteSpaces;
-
+  
   int currentKeyword = 0;
   bool readingString = false;
   bool readingChar = false;
   bool range = true;
-  
 
-  
   myfile.open("cocolEjemplo.txt");
   if (myfile.is_open())
   {
@@ -312,11 +319,6 @@ int main () {
                     terms[1] = replaceTerm(terms[1], '[', "(");
                     terms[1] = replaceTerm(terms[1], ']', ")+");
                   }
-                  //Eliminate chars
-                  firstPosition = terms[1].find("'");
-                  if (firstPosition != string::npos) {
-                    terms[1] = replaceTerm(terms[1], '\'', "\"");
-                  }
                   savedTokens[terms[0]] = terms[1];
 
                 }
@@ -336,18 +338,9 @@ int main () {
     myfile.close();
   }
   else cout << "Unable to open file"; 
+}
 
-  
-
-
-  /* Print generated maps */
-  /*
-  for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it)
-  {
-      std::cout << it->first << " " << it->second << "\n";
-  }*/
-
-
+void sustitute(map<string,string>& savedCharacters, map<string,string>& savedTokens){
   for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
     //cout << it->first << " " << it->second << endl;
     
@@ -377,16 +370,61 @@ int main () {
     }
     //cout << it->first << " " << it->second << endl;
   }
+}
 
+int main () {
+
+
+
+  map<string,string> savedKeywords;
+  map<string,string> savedCharacters;
+  map<string,string> savedTokens;
+  vector<string> whiteSpaces;
+
+  fillmaps(savedKeywords, savedCharacters, savedTokens, whiteSpaces);
+  sustitute(savedCharacters, savedTokens);
+  /*
   for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
     cout << it->first << " " << it->second << endl;
   }
-
-  /*
-   for(int i = 0; i < whiteSpaces.size(); i++)
+  for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it){
+    cout << it->first << " " << it->second << endl;
+  }
+  for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it){
+    cout << it->first << " " << it->second << endl;
+  }
+  for(int i = 0; i < whiteSpaces.size(); i++)
   {
       cout << whiteSpaces[i] << endl;
   }*/
+
+  string line;
+  ifstream basefile;
+  basefile.open("scanner.cpp");
+  ofstream newfile("main.cpp");
+  if (basefile.is_open())
+  {
+    while ( getline (basefile,line) )
+    {
+      if (equal(line.begin(), line.end(), flag.begin(), flag.end())){
+        for(int i = 0; i < whiteSpaces.size(); i++){
+          for(int j = 1; j < whiteSpaces[i].size() - 1; j++){
+            newfile <<  "    whitespaces.insert('" << whiteSpaces[i][j] << "');" << endl;
+          }
+        }
+        for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
+          newfile <<  "    expressions.push_back(\"" << replaceQuotes(it->second) <<"\");"<< endl;
+        }
+        //cout << "Siiiii\n";
+      } else {
+        newfile << line << "\n";
+      }
+    }
+   basefile.close();
+   newfile.close();
+  } else {
+    cout << "Unable to open file";
+  }
 
   return 0;
 }
