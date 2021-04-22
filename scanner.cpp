@@ -562,9 +562,11 @@ class AFDirect{
     set<string> alphabet;
     vector<int> finalids;
     vector<string> expressions;
+    vector<string> expressionsId;
+    map<string,bool> exceptTokens;
     set<char> whitespaces;
     //Methods
-    bool isTerminal(int currentState);
+    int isTerminal(int currentState);
     void followpos(Node* node);
     set<int> getFollowpos(int id);
     string getLetter(int id);
@@ -574,13 +576,16 @@ class AFDirect{
     * Contructor
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
     */
-    AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions, set<char> whitespaces){
+    AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions , vector<string> expressionsId, 
+    set<char> whitespaces, map<string,bool> exceptTokens){
         followpos(start);
        // cout << "alhabet " << setToString(alphabet) << endl;
         this->finalids = finalids;
         this->alphabet = alphabet;
         this->expressions = expressions;
+        this->expressionsId = expressionsId;
         this->whitespaces = whitespaces;
+        this->exceptTokens = exceptTokens;
         queue<set<int>> pendingStates;
         states.push_back(setNodeToSetInt(start->firstpos));
         pendingStates.push(setNodeToSetInt(start->firstpos));
@@ -756,14 +761,14 @@ int AFDirect::getNumber(string letter){
  * In arg:        currentState, the state to be checked
  * Return val:    -------
  */
-bool AFDirect::isTerminal(int currentState){
+int AFDirect::isTerminal(int currentState){
     for (int j = 0; j < finalids.size(); j = j + 1){
         int finalNum = finalids[j];
         if (states[currentState].find(finalNum) != states[currentState].end()){
-            return true;
+            return j;
         }
     }
-    return false;
+    return -1;
 }
 
 /*---------------------------------------------------------------------
@@ -805,8 +810,13 @@ void AFDirect::simulate(string chain){
             }
             //The character read had no existing transition     
             if (transitions[currentState][transition] == -1){
-                if (this->isTerminal(currentState)){
-                    cout << "Se identifico un token para " << readCharacters << endl;
+                int terminalId = this->isTerminal(currentState);
+                if (terminalId > -1){
+                    if (this->exceptTokens[this->expressionsId[terminalId]]){
+                        cout << "Se identifico un token para " << readCharacters << " "  << "keyword" << endl;
+                    } else {
+                        cout << "Se identifico un token para " << readCharacters << " " << this->expressionsId[terminalId] << endl;
+                    }
                     currentState = 0;
                     readCharacters = "";
                 } else {
@@ -822,8 +832,9 @@ void AFDirect::simulate(string chain){
     }
 
     cout << currentState << endl;
-    if (this->isTerminal(currentState)){
-        cout << "Se identifico un token para " << readCharacters << endl;
+    int terminalId = this->isTerminal(currentState);
+    if (terminalId > -1){
+        cout << "Se identifico un token para " << readCharacters << " " << this->expressionsId[terminalId] << endl;
     } else {
         cout << "Error en la cadena ingresada al final" << endl;
     }
@@ -1067,6 +1078,8 @@ bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
 
 int main(int argc, char **argv) { 
     vector<string> expressions;
+    vector<string> expressionsId;
+    map<string,bool> exceptTokens;
     vector<int> finalids;
     map<string,string> savedCharacters;
     set<char> whitespaces;
@@ -1089,14 +1102,14 @@ int main(int argc, char **argv) {
     }
     fillFunctions(syntaxtree->root);
     printSyntaxTree(syntaxtree->root, 0);
-    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, whitespaces);
+    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens);
     writeAFDirect(afdirect, "afdirect.txt");
     printAFDirect(afdirect); 
     /* 
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("DBAABBABBAA(H) 1234");
+    afdirect->simulate("if 1234");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];

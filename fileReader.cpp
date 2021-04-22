@@ -29,6 +29,7 @@ using namespace std;
 const string flag = "    //INSERT EXPRESSIONS";
 
 const string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "IGNORE", "PRODUCTIONS", "END"};
+const string keywordsFlag = {"EXCEPT KEYWORDS"} ;
 
 int isKeyWord(string line, int cont, const string keywords[]){
   //change the 6
@@ -203,7 +204,8 @@ string generateSetOfOrs(string set){
   return result + ")";
 }
 
-void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, vector<string>& whiteSpaces){
+void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, 
+  vector<string>& whiteSpaces, map<string,bool>& exceptTokens){
   string line;
   ifstream myfile;
   
@@ -211,6 +213,7 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
   bool readingString = false;
   bool readingChar = false;
   bool range = true;
+  bool exceptKeyWordsFlag = false;
 
   myfile.open("cocolEjemplo.txt");
   if (myfile.is_open())
@@ -237,6 +240,14 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
           acum = acum + line[cont];
         } else if (readingString && line[cont] != '"'){
           acum = acum + line[cont];
+        } else if (line.substr(cont,keywordsFlag.size()).compare(keywordsFlag) == 0){
+          if (acum.size() > 0){
+            terms.push_back(acum);
+            acum = "";
+          }
+          exceptKeyWordsFlag = true;
+          cont = cont + keywordsFlag.size() - 1;
+          cout << line[cont + keywordsFlag.size()] << endl;
         } else if (line[cont] == '\''){
           if (readingChar){
             readingChar = false;
@@ -259,8 +270,10 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
           operands.push_back(line[cont]);
           acum = "";
         } else if (line[cont] == '.'){
-          terms.push_back(acum);
-          acum = "";
+          if (acum.size() > 0) {
+            terms.push_back(acum);
+            acum = "";
+          }
           switch(currentKeyword) {
               case 1:
               case 4:
@@ -320,7 +333,11 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
                     terms[1] = replaceTerm(terms[1], ']', ")+");
                   }
                   savedTokens[terms[0]] = terms[1];
+                  exceptTokens[terms[0]] = exceptKeyWordsFlag;
+                  exceptKeyWordsFlag = false;
 
+                } else {
+                  //Error
                 }
                 break;
           }
@@ -373,15 +390,13 @@ void sustitute(map<string,string>& savedCharacters, map<string,string>& savedTok
 }
 
 int main () {
-
-
-
   map<string,string> savedKeywords;
   map<string,string> savedCharacters;
   map<string,string> savedTokens;
+  map<string,bool> exceptTokens;
   vector<string> whiteSpaces;
 
-  fillmaps(savedKeywords, savedCharacters, savedTokens, whiteSpaces);
+  fillmaps(savedKeywords, savedCharacters, savedTokens, whiteSpaces, exceptTokens);
   sustitute(savedCharacters, savedTokens);
   /*
   for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
@@ -413,7 +428,10 @@ int main () {
           }
         }
         for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
+          cout << it->second << endl;
+          newfile <<  "    exceptTokens[\"" << it->first << "\"] = "<< exceptTokens[it->first] <<";\n";
           newfile <<  "    expressions.push_back(\"" << replaceQuotes(it->second) <<"\");"<< endl;
+          newfile <<  "    expressionsId.push_back(\"" << replaceQuotes(it->first) <<"\");"<< endl;
         }
         //cout << "Siiiii\n";
       } else {
