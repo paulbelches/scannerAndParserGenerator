@@ -564,7 +564,7 @@ class AFDirect{
     vector<string> expressions;
     vector<string> expressionsId;
     map<string,bool> exceptTokens;
-    set<char> whitespaces;
+    set<int> whitespaces;
     //Methods
     int isTerminal(int currentState);
     void followpos(Node* node);
@@ -577,7 +577,7 @@ class AFDirect{
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
     */
     AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions , vector<string> expressionsId, 
-    set<char> whitespaces, map<string,bool> exceptTokens){
+    set<int> whitespaces, map<string,bool> exceptTokens){
         followpos(start);
        // cout << "alhabet " << setToString(alphabet) << endl;
         this->finalids = finalids;
@@ -1082,7 +1082,7 @@ int main(int argc, char **argv) {
     map<string,bool> exceptTokens;
     vector<int> finalids;
     map<string,string> savedCharacters;
-    set<char> whitespaces;
+    set<int> whitespaces;
     //INSERT EXPRESSIONS
     string expr = expand(expressions[0]);
     cout << expr << endl;
@@ -1109,7 +1109,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("if 1234");
+    //afdirect->simulate("if 1234");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];

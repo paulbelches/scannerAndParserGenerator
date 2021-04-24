@@ -564,7 +564,7 @@ class AFDirect{
     vector<string> expressions;
     vector<string> expressionsId;
     map<string,bool> exceptTokens;
-    set<char> whitespaces;
+    set<int> whitespaces;
     //Methods
     int isTerminal(int currentState);
     void followpos(Node* node);
@@ -577,7 +577,7 @@ class AFDirect{
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
     */
     AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions , vector<string> expressionsId, 
-    set<char> whitespaces, map<string,bool> exceptTokens){
+    set<int> whitespaces, map<string,bool> exceptTokens){
         followpos(start);
        // cout << "alhabet " << setToString(alphabet) << endl;
         this->finalids = finalids;
@@ -1082,16 +1082,47 @@ int main(int argc, char **argv) {
     map<string,bool> exceptTokens;
     vector<int> finalids;
     map<string,string> savedCharacters;
-    set<char> whitespaces;
-    whitespaces.insert(' ');
-    exceptTokens["hexnumber"] = 0;
-    expressions.push_back("('A'|'B'|'C'|'D'|'E'|'F'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9')(('A'|'B'|'C'|'D'|'E'|'F'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'))*\"(H)\"");
+    set<int> whitespaces;
+    whitespaces.insert(0);
+    whitespaces.insert(1);
+    whitespaces.insert(2);
+    whitespaces.insert(3);
+    whitespaces.insert(4);
+    whitespaces.insert(5);
+    whitespaces.insert(6);
+    whitespaces.insert(7);
+    whitespaces.insert(8);
+    whitespaces.insert(9);
+    whitespaces.insert(10);
+    whitespaces.insert(11);
+    whitespaces.insert(12);
+    whitespaces.insert(13);
+    whitespaces.insert(14);
+    whitespaces.insert(15);
+    whitespaces.insert(16);
+    whitespaces.insert(17);
+    whitespaces.insert(18);
+    whitespaces.insert(19);
+    whitespaces.insert(20);
+    whitespaces.insert(21);
+    whitespaces.insert(22);
+    whitespaces.insert(23);
+    whitespaces.insert(24);
+    whitespaces.insert(25);
+    whitespaces.insert(26);
+    whitespaces.insert(27);
+    whitespaces.insert(28);
+    whitespaces.insert(29);
+    whitespaces.insert(30);
+    whitespaces.insert(31);
+    exceptTokens["hexnumber"] = 1;
+    expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*((48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*)*(40)(72)(41)");
     expressionsId.push_back("hexnumber");
     exceptTokens["id"] = 1;
-    expressions.push_back("(('A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'|'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z')(('A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'|'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'))*)|(('A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'|'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'))");
+    expressions.push_back("(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)((65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122))*|(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)");
     expressionsId.push_back("id");
     exceptTokens["number"] = 0;
-    expressions.push_back("('0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9')(('0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'))*");
+    expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*");
     expressionsId.push_back("number");
     string expr = expand(expressions[0]);
     cout << expr << endl;
@@ -1118,7 +1149,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("if 1234");
+    //afdirect->simulate("if 1234");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
