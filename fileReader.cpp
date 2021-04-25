@@ -285,8 +285,6 @@ void passToOrs(map<string,string>& savedCharacters){
   }
 };
 
-
-
 void replace(map<string,string>& savedCharacters, map<string,string>& savedTokens, vector<string>& tokenIds){
   for(int i = 0; i < tokenIds.size(); i++){
     bool isReady = false;
@@ -504,7 +502,7 @@ int main () {
   replace(savedCharacters, savedTokens, tokenIds);
   //
   resultWhiteSpaces = replaceString(mergeWhiteSpaces(whiteSpaces), "''", ",", true);
-  
+  //Prints
   for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
     if (it->second.size() > 0) {
       cout << it->first << " " << it->second << endl;
@@ -519,11 +517,8 @@ int main () {
   for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it){
     cout << it->first << " " << it->second << endl;
   }
-  for(int i = 0; i < whiteSpaces.size(); i++)
-  {
-    cout << whiteSpaces[i] << endl;
-  }
-
+  cout << resultWhiteSpaces << endl;
+  //write file
   string line;
   ifstream basefile;
   basefile.open("scanner.cpp");
@@ -534,15 +529,15 @@ int main () {
     {
       if (equal(line.begin(), line.end(), flag.begin(), flag.end())){
         string acum = "";
-        for(int i = 1; i < resultWhiteSpaces.size() - 2; i++){
+        for(int i = 1; i < resultWhiteSpaces.size() - 1; i++){
           if (resultWhiteSpaces[i] == ','){
             newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
             acum = "";
           } else {
             acum = acum  + resultWhiteSpaces[i];
           }
-          
         }
+        newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
         for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
           if (it->second.size() > 0) {
             //cout << it->second << endl;

@@ -778,34 +778,31 @@ int AFDirect::isTerminal(int currentState){
  * Return val:    -------
  */
 void AFDirect::simulate(string chain){
+    //cout << "Entre" << endl;
     int currentState = 0;
     string readCharacters = "";
     int i = 0;
     while (i < chain.size()){
-        if (this->whitespaces.find(chain[i]) != whitespaces.end()){
+        if (this->whitespaces.find((int)chain[i]) != whitespaces.end()){
             //check if terminal state
             i = i + 1;
         } else {
             int cont = 0 ;
             int transition = -1 ;//check if it does not change
-            int subStringlength = -1 ;//check if it does not change
+            string charcterNumber = to_string((int)chain[i]);
             //Make transition
             for (auto const &e: alphabet) {
-                if ((e[0] == '"' && e[e.size() - 1] == '"') || (e[0] == '\'' && e[e.size() - 1] == '\'')){
-                    string transitionValue = e.substr(1, e.size()- 2);
-                    string subchain = chain.substr(i, transitionValue.size());
-                    if (  equal(transitionValue.begin(), transitionValue.end(), subchain.begin(), subchain.end())  ){
-                        /*cout << " string " << endl; 
-                        cout << e.substr(1, e.size()- 2) << " " << endl; */
-                        transition = cont;
-                        subStringlength = subchain.size();
-                    }
-                } 
+                //cout << e << " " << charcterNumber << endl;
+                if (  charcterNumber == e ){
+                    //cout << "si" << endl;
+                    transition = cont;
+                    //subStringlength = subchain.size();
+                 }
                 cont = cont + 1;
             }
             //The character read had was not from the aplhabet
             if (transition == -1){
-                cout << "Error en la cadena ingresada arriba" << endl;
+                cout << "Error en la cadena ingresada arriba " << charcterNumber << endl;
                 break;
             }
             //The character read had no existing transition     
@@ -813,32 +810,32 @@ void AFDirect::simulate(string chain){
                 int terminalId = this->isTerminal(currentState);
                 if (terminalId > -1){
                     if (this->exceptTokens[this->expressionsId[terminalId]]){
-                        cout << "Se identifico un token para " << readCharacters << " "  << "keyword" << endl;
+                        cout << "<" << readCharacters << ", keyword>" << endl;
                     } else {
-                        cout << "Se identifico un token para " << readCharacters << " " << this->expressionsId[terminalId] << endl;
+                        cout << "<" << readCharacters << "," << this->expressionsId[terminalId] << ">" << endl;
                     }
-                    currentState = 0;
-                    readCharacters = "";
                 } else {
-                    cout << "Error en la cadena ingresada abajo" << endl;
-                    break;
+                    cout << "<" << readCharacters << ", error>" << endl;
                 }
+                currentState = 0;
+                readCharacters = "";
             } else {
                 currentState = transitions[currentState][transition];
-                readCharacters = readCharacters + chain.substr(i, subStringlength);;
-                i = i + subStringlength;
+                readCharacters = readCharacters + chain[i];
+                i = i + 1;
             }
         }
     }
-
-    cout << currentState << endl;
-    int terminalId = this->isTerminal(currentState);
+    int terminalId = this->isTerminal(currentState);        
     if (terminalId > -1){
-        cout << "Se identifico un token para " << readCharacters << " " << this->expressionsId[terminalId] << endl;
+        if (this->exceptTokens[this->expressionsId[terminalId]]){
+            cout << "<" << readCharacters << ", keyword>" << endl;
+        } else {
+            cout << "<" << readCharacters << "," << this->expressionsId[terminalId] << ">" << endl;
+        }
     } else {
-        cout << "Error en la cadena ingresada al final" << endl;
+        cout << "<" << readCharacters << ", error>" << endl;    
     }
-    cout << readCharacters << endl;
     //borrar
     /*
     i = chain.size();
@@ -1109,7 +1106,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    //afdirect->simulate("if 1234");
+    afdirect->simulate("if 1234(H");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
