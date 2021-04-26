@@ -572,6 +572,7 @@ class AFDirect{
     string getLetter(int id);
     int getNumber(string letter);
     void simulate(string chain);
+    int getTransition(string charcterNumber);
     /*---------------------------------------------------------------------
     * Contructor
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
@@ -771,6 +772,23 @@ int AFDirect::isTerminal(int currentState){
     return -1;
 }
 
+int AFDirect:: getTransition(string charcterNumber){
+    int cont = 0 ;
+    int transition = -1 ;//check if it does not change
+    //Make transition
+    for (auto const &e: alphabet) {
+        //cout << e << " " << charcterNumber << endl;
+        if (  charcterNumber == e ){
+            //cout << "si" << endl;
+            transition = cont;
+        //subStringlength = subchain.size();
+         }
+        cont = cont + 1;
+    }
+    return transition;
+}
+
+
 /*---------------------------------------------------------------------
  * Function:      simulate
  * Purpose:       Simulate a direct deterministic finite automata for a input chain
@@ -778,68 +796,63 @@ int AFDirect::isTerminal(int currentState){
  * Return val:    -------
  */
 void AFDirect::simulate(string chain){
-    //cout << "Entre" << endl;
-    int currentState = 0;
-    string readCharacters = "";
+    //check alphabet
+    stack<int> chequedStates;
     int i = 0;
-    while (i < chain.size()){
-        if (this->whitespaces.find((int)chain[i]) != whitespaces.end()){
-            //check if terminal state
-            i = i + 1;
-        } else {
-            int cont = 0 ;
-            int transition = -1 ;//check if it does not change
-            string charcterNumber = to_string((int)chain[i]);
-            //Make transition
-            for (auto const &e: alphabet) {
-                //cout << e << " " << charcterNumber << endl;
-                if (  charcterNumber == e ){
-                    //cout << "si" << endl;
-                    transition = cont;
-                    //subStringlength = subchain.size();
-                 }
-                cont = cont + 1;
-            }
-            //The character read had was not from the aplhabet
-            if (transition == -1){
-                cout << "Error en la cadena ingresada arriba " << charcterNumber << endl;
-                break;
-            }
-            //The character read had no existing transition     
-            if (transitions[currentState][transition] == -1){
-                int terminalId = this->isTerminal(currentState);
-                if (terminalId > -1){
-                    if (this->exceptTokens[this->expressionsId[terminalId]]){
-                        cout << "<" << readCharacters << ", keyword>" << endl;
-                    } else {
-                        cout << "<" << readCharacters << "," << this->expressionsId[terminalId] << ">" << endl;
-                    }
-                } else {
-                    cout << "<" << readCharacters << ", error>" << endl;
-                }
-                currentState = 0;
+    int currentState = 0;
+    chequedStates.push(0);
+    string readCharacters = "";
+    while(i < chain.size()){
+        int transition = getTransition(to_string((int)chain[i]));
+        //cout << transition << " "<< readCharacters << " "<< currentState << " "<<  transitions[currentState][transition] << endl;
+        if (transitions[currentState][transition] == -1){
+            //cout << terminalId << " " << chequedStates.size() << endl;
+            if (chequedStates.size() == 1){
+                readCharacters = readCharacters + chain[i];
+                i++;
+                cout << "<" << readCharacters << ", error>\n";
                 readCharacters = "";
             } else {
-                currentState = transitions[currentState][transition];
-                readCharacters = readCharacters + chain[i];
-                i = i + 1;
+                int goback = 0;
+                int terminalId = isTerminal(currentState);
+                while(terminalId == -1){
+                    if (chequedStates.size() == 1){
+                        cout << "<" << readCharacters << ", error>\n";
+                        readCharacters = "";
+                        currentState = 0;
+                        chequedStates.top() = 0;
+                        goback = -1;
+                        break;
+                    }
+                    chequedStates.pop();
+                    currentState = chequedStates.top();
+                    terminalId = isTerminal(currentState);
+                    goback++;
+                }
+                if (goback > -1){
+                    i = i - goback;
+                    readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
+                    if (exceptTokens[expressionsId[terminalId]]){
+                        cout << "<" << readCharacters << ", keyword>" << endl;
+                    } else {
+                        cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+                    }
+                    readCharacters = "";
+                    while (chequedStates.size() > 1){
+                        chequedStates.pop();
+                    }
+                    currentState = 0;
+                }
             }
-        }
-    }
-    int terminalId = this->isTerminal(currentState);        
-    if (terminalId > -1){
-        if (this->exceptTokens[this->expressionsId[terminalId]]){
-            cout << "<" << readCharacters << ", keyword>" << endl;
         } else {
-            cout << "<" << readCharacters << "," << this->expressionsId[terminalId] << ">" << endl;
+            currentState = transitions[currentState][transition];
+            chequedStates.push(currentState);
+            readCharacters = readCharacters + chain[i];
+            i++;
         }
-    } else {
-        cout << "<" << readCharacters << ", error>" << endl;    
     }
-    //borrar
-    /*
-    i = chain.size();
-    }*/
+    //cout << readCharacters << endl;
+
 }
 /*---------------------------------------------------------------------
  * Function:      writeAFDirect
@@ -1147,7 +1160,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("if 1234(H");
+    afdirect->simulate("1234(H(");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
