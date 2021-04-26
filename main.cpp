@@ -799,50 +799,55 @@ void AFDirect::simulate(string chain){
     chequedStates.push(0);
     string readCharacters = "";
     while(i < chain.size()){
-        int transition = getTransition(to_string((int)chain[i]));
-        if (transitions[currentState][transition] == -1){
-            if (chequedStates.size() == 1){
+        if (this->whitespaces.find((int)chain[i]) != whitespaces.end()){
+            //check if terminal state
+            i = i + 1;
+        } else {
+            int transition = getTransition(to_string((int)chain[i]));
+            if (transitions[currentState][transition] == -1){
+                if (chequedStates.size() == 1){
+                    readCharacters = readCharacters + chain[i];
+                    i++;
+                    cout << "<" << readCharacters << ", error>\n";
+                    readCharacters = "";
+                } else {
+                    int goback = 0;
+                    int terminalId = isTerminal(currentState);
+                    while(terminalId == -1){
+                        if (chequedStates.size() == 1){
+                            cout << "<" << readCharacters << ", error>\n";
+                            readCharacters = "";
+                            currentState = 0;
+                            chequedStates.top() = 0;
+                            goback = -1;
+                            break;
+                        }
+                        chequedStates.pop();
+                        currentState = chequedStates.top();
+                        terminalId = isTerminal(currentState);
+                        goback++;
+                    }
+                    if (goback > -1){
+                        i = i - goback;
+                        readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
+                        if (exceptTokens[expressionsId[terminalId]]){
+                            cout << "<" << readCharacters << ", keyword>" << endl;
+                        } else {
+                            cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+                        }
+                        readCharacters = "";
+                        while (chequedStates.size() > 1){
+                            chequedStates.pop();
+                        }
+                        currentState = 0;
+                    }
+                }
+            } else {
+                currentState = transitions[currentState][transition];
+                chequedStates.push(currentState);
                 readCharacters = readCharacters + chain[i];
                 i++;
-                cout << "<" << readCharacters << ", error>\n";
-                readCharacters = "";
-            } else {
-                int goback = 0;
-                int terminalId = isTerminal(currentState);
-                while(terminalId == -1){
-                    if (chequedStates.size() == 1){
-                        cout << "<" << readCharacters << ", error>\n";
-                        readCharacters = "";
-                        currentState = 0;
-                        chequedStates.top() = 0;
-                        goback = -1;
-                        break;
-                    }
-                    chequedStates.pop();
-                    currentState = chequedStates.top();
-                    terminalId = isTerminal(currentState);
-                    goback++;
-                }
-                if (goback > -1){
-                    i = i - goback;
-                    readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
-                    if (exceptTokens[expressionsId[terminalId]]){
-                        cout << "<" << readCharacters << ", keyword>" << endl;
-                    } else {
-                        cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
-                    }
-                    readCharacters = "";
-                    while (chequedStates.size() > 1){
-                        chequedStates.pop();
-                    }
-                    currentState = 0;
-                }
             }
-        } else {
-            currentState = transitions[currentState][transition];
-            chequedStates.push(currentState);
-            readCharacters = readCharacters + chain[i];
-            i++;
         }
     }
 }
@@ -1117,12 +1122,11 @@ int main(int argc, char **argv) {
     whitespaces.insert(29);
     whitespaces.insert(30);
     whitespaces.insert(31);
-    whitespaces.insert(32);
     exceptTokens["hexnumber"] = 1;
     expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*((48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*)*(40)(72)(41)");
     expressionsId.push_back("hexnumber");
     exceptTokens["id"] = 1;
-    expressions.push_back("letter(letter)*|letter");
+    expressions.push_back("(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)((65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122))*|(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)");
     expressionsId.push_back("id");
     exceptTokens["number"] = 0;
     expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*");
@@ -1152,7 +1156,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("1234(H(");
+    afdirect->simulate("if hola 12345");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];

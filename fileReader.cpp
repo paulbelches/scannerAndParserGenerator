@@ -356,6 +356,7 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
       cont = cont + keywords[currentKeyword].size() - 1;
       terms.clear();
       operands.clear();
+      acum= "";
     } else if (readingChar && line[cont] != '\''){
       acum = acum + line[cont];
     } else if (readingString && line[cont] != '"'){
@@ -490,9 +491,6 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
   }
 }
 
-
-
-
 string mergeWhiteSpaces(vector<string>& whiteSpaces){
   string result = "";
   for(int i = 0; i < whiteSpaces.size(); i++){
@@ -512,7 +510,7 @@ int main () {
 
   fillmaps(savedKeywords, savedCharacters, savedTokens, whiteSpaces, exceptTokens, tokenIds);
   passToOrs(savedCharacters);
-  makeUnique(savedCharacters);
+  //makeUnique(savedCharacters);
   replace(savedCharacters, savedTokens, tokenIds);
   //
   resultWhiteSpaces = replaceString(mergeWhiteSpaces(whiteSpaces), "''", ",", true);

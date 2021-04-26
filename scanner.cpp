@@ -799,50 +799,55 @@ void AFDirect::simulate(string chain){
     chequedStates.push(0);
     string readCharacters = "";
     while(i < chain.size()){
-        int transition = getTransition(to_string((int)chain[i]));
-        if (transitions[currentState][transition] == -1){
-            if (chequedStates.size() == 1){
+        if (this->whitespaces.find((int)chain[i]) != whitespaces.end()){
+            //check if terminal state
+            i = i + 1;
+        } else {
+            int transition = getTransition(to_string((int)chain[i]));
+            if (transitions[currentState][transition] == -1){
+                if (chequedStates.size() == 1){
+                    readCharacters = readCharacters + chain[i];
+                    i++;
+                    cout << "<" << readCharacters << ", error>\n";
+                    readCharacters = "";
+                } else {
+                    int goback = 0;
+                    int terminalId = isTerminal(currentState);
+                    while(terminalId == -1){
+                        if (chequedStates.size() == 1){
+                            cout << "<" << readCharacters << ", error>\n";
+                            readCharacters = "";
+                            currentState = 0;
+                            chequedStates.top() = 0;
+                            goback = -1;
+                            break;
+                        }
+                        chequedStates.pop();
+                        currentState = chequedStates.top();
+                        terminalId = isTerminal(currentState);
+                        goback++;
+                    }
+                    if (goback > -1){
+                        i = i - goback;
+                        readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
+                        if (exceptTokens[expressionsId[terminalId]]){
+                            cout << "<" << readCharacters << ", keyword>" << endl;
+                        } else {
+                            cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+                        }
+                        readCharacters = "";
+                        while (chequedStates.size() > 1){
+                            chequedStates.pop();
+                        }
+                        currentState = 0;
+                    }
+                }
+            } else {
+                currentState = transitions[currentState][transition];
+                chequedStates.push(currentState);
                 readCharacters = readCharacters + chain[i];
                 i++;
-                cout << "<" << readCharacters << ", error>\n";
-                readCharacters = "";
-            } else {
-                int goback = 0;
-                int terminalId = isTerminal(currentState);
-                while(terminalId == -1){
-                    if (chequedStates.size() == 1){
-                        cout << "<" << readCharacters << ", error>\n";
-                        readCharacters = "";
-                        currentState = 0;
-                        chequedStates.top() = 0;
-                        goback = -1;
-                        break;
-                    }
-                    chequedStates.pop();
-                    currentState = chequedStates.top();
-                    terminalId = isTerminal(currentState);
-                    goback++;
-                }
-                if (goback > -1){
-                    i = i - goback;
-                    readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
-                    if (exceptTokens[expressionsId[terminalId]]){
-                        cout << "<" << readCharacters << ", keyword>" << endl;
-                    } else {
-                        cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
-                    }
-                    readCharacters = "";
-                    while (chequedStates.size() > 1){
-                        chequedStates.pop();
-                    }
-                    currentState = 0;
-                }
             }
-        } else {
-            currentState = transitions[currentState][transition];
-            chequedStates.push(currentState);
-            readCharacters = readCharacters + chain[i];
-            i++;
         }
     }
 }
@@ -1111,7 +1116,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("1234(H(");
+    afdirect->simulate("if hola 12345");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
