@@ -322,15 +322,6 @@ vector<string> setToStringVector(set<string> s){
     return result;
 }
 
-string printStack(stack<char> stack){
-    string result = "";
-    while (!stack.empty()){
-        result = result + stack.top();
-        stack.pop();
-    }
-    return result;
-}
-
 /*---------------------------------------------------------------------
  * Class:           SyntaxTree
  * Purpose:         Represents a SyntaxTree
@@ -370,7 +361,6 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 } else if (expr[i] == ')') {
                     while (opStack.top() != '('){
-                        //cout << result << " stack: " << printStack(opStack) << endl;
                         string s(1,opStack.top());
                         result.push_back(s);
                         opStack.pop();
@@ -795,7 +785,6 @@ int AFDirect:: getTransition(string charcterNumber){
     return transition;
 }
 
-
 /*---------------------------------------------------------------------
  * Function:      simulate
  * Purpose:       Simulate a direct deterministic finite automata for a input chain
@@ -1118,7 +1107,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens);
     writeAFDirect(afdirect, "afdirect.txt");
     printAFDirect(afdirect); 
-    /* 
+    /*
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/

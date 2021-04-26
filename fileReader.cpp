@@ -306,10 +306,33 @@ void replace(map<string,string>& savedCharacters, map<string,string>& savedToken
   }
 }
 
+int generateStream(string& file){
+    string filename("cocolEjemplo.txt");
+    vector<char> bytes;
+    char byte = 0;
+
+    ifstream input_file(filename);
+    if (!input_file.is_open()) {
+        cerr << "Could not open the file - '" << filename << "'" << endl;
+        return -1;
+    }
+
+    while (input_file.get(byte)) {
+        bytes.push_back(byte);
+    }
+    for (const auto &i : bytes) {
+        file = file + i;
+        //cout << i << " " << (int)i << " " << isspace(i) << endl;
+    }
+    cout << endl;
+    input_file.close();
+
+    return 1;
+}
+
 void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, 
   vector<string>& whiteSpaces, map<string,bool>& exceptTokens, vector<string>& tokenIds){
   string line;
-  ifstream myfile;
   
   int currentKeyword = 0;
   bool readingString = false;
@@ -319,165 +342,156 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
 
   vector<string> terms;
   vector<char> operands;
-  myfile.open("cocolEjemplo.txt");
-  if (myfile.is_open())
-  {
-    while ( getline (myfile,line) )
-    {
-      //Remove "CHR" and ".."
-      line = replaceString(line, "..", "$", false);
-      int cont = 0;
-      string acum = "";
-      while (line.size() > cont){
-        // check for key word
-        int tempCurrentKeyword = isKeyWord(line, cont, keywords);
 
-        if (tempCurrentKeyword > 0){
-          //check if the temp is lower than the actual, if that is the case, return errror
-          currentKeyword = tempCurrentKeyword;
-          cont = cont + keywords[currentKeyword].size() - 1;
-          terms.clear();
-          operands.clear();
-        } else if (readingChar && line[cont] != '\''){
-          acum = acum + line[cont];
-        } else if (readingString && line[cont] != '"'){
-          acum = acum + line[cont];
-        } else if (line.substr(cont,keywordsFlag.size()).compare(keywordsFlag) == 0){
-          if (acum.size() > 0){
-            if (currentKeyword == 1 ||currentKeyword == 4){
-              acum = format(acum);
-            }
-            terms.push_back(acum);
-            acum = "";
-          }
-          exceptKeyWordsFlag = true;
-          cont = cont + keywordsFlag.size() - 1;
-        } else if (line[cont] == '\''){
-          if (readingChar){
-            readingChar = false;
-          } else {
-            readingChar = true;
-          }
-          acum = acum + line[cont];
-        } else if (line[cont] == '"'){
-          if (readingString){
-            readingString = false;
-          } else {
-            readingString = true;
-          }
-          acum = acum + line[cont];
-        } else if (line[cont] == '='){
-          if (acum.size() > 0){
-            if (currentKeyword == 1 ||currentKeyword == 4){
-              acum = format(acum);
-            }
-            terms.push_back(acum);
-            acum = "";
-          }
-        } else if (line[cont] == '+' || line[cont] == '-'){
-          if (acum.size() > 0){
-            if (currentKeyword == 1 ||currentKeyword == 4){
-              acum = format(acum);
-            }
-            terms.push_back(acum);
-            acum = "";
-          }
-          operands.push_back(line[cont]);
-          acum = "";
-        } else if (line[cont] == '.'){
-          if (acum.size() > 0){
-            if (currentKeyword == 1 ||currentKeyword == 4){
-              acum = format(acum);
-            }
-            terms.push_back(acum);
-            acum = "";
-          }
-          switch(currentKeyword) {
-              case 1:
-              case 4:
-                while (operands.size() > 0){
-                  if (operands[operands.size() - 1] == '+'){
-                    terms[terms.size() - 2] = join( (terms[terms.size() - 2]), (terms[terms.size() - 1]), savedCharacters);
-                    terms.pop_back();
-                    operands.pop_back();
-                  } else if (operands[operands.size() - 1] == '-'){
-                    terms[terms.size() - 2] = remove( (terms[terms.size() - 2]), (terms[terms.size() - 1]), savedCharacters);
-                    terms.pop_back();
-                    operands.pop_back();
-                  }
-                  else {
-                    //error
-                  }
-                }
-                //cout << terms[terms.size() - 2] << endl;
-                if (currentKeyword == 1) {
-                  if (terms.size() == 2){
-                    //cout << terms[0] << " " << terms[1] << endl;
-                    savedCharacters[terms[0]] = (terms[1]);
-                    terms.clear();
-                    operands.clear();
-                  } else {
-                    cout << "Error 1" << endl;
-                  } 
-                } else {
-                  if (terms.size() == 1){
-                    whiteSpaces.push_back((terms[0]));
-                    terms.clear();
-                    operands.clear();
-                  }  else {
-                    cout << "Error" << endl;
-                  } 
-                }
-                break;
-              case 2:
-                if (terms.size() == 2){
-                  savedKeywords[terms[0]] = terms[1];
-                  terms.clear();
-                  operands.clear();
-                } 
-                break;
-              case 3:
-                if (terms.size() == 2){
-
-                  terms[1] = format(terms[1]);
-                  terms[1] = passToParentesis(replaceString(terms[1], "''", ")(", true));
-                  size_t firstPosition = terms[1].find("{");
-                  //cout << terms[1] << endl;
-                  if (firstPosition != string::npos) {
-                    terms[1] = replaceString(terms[1], "{", "(", false);
-                    terms[1] = replaceString(terms[1], "}", ")*", false);
-                  }
-                  firstPosition = terms[1].find("[");
-                  if (firstPosition != string::npos) {
-                    terms[1] = replaceString(terms[1], "[", "(", false);
-                    terms[1] = replaceString(terms[1], "]", ")+", false);
-                  }
-
-                  savedTokens[terms[0]] = terms[1];
-                  tokenIds.push_back(terms[0]);
-                  exceptTokens[terms[0]] = exceptKeyWordsFlag;
-                  terms.clear();
-                  operands.clear();
-
-                } else {
-                  //Error
-                }
-                break;
-          }
-        } else if (isspace(line[cont])){
-          //terms.push_back(acum);
-          //acum = "";
-        } else {
-          acum = acum + line[cont];
-          //cout << line[cont];
+  generateStream(line);
+  line = replaceString(line, "..", "$", false);
+  int cont = 0;
+  string acum = "";
+  while (line.size() > cont){
+  // check for key word
+    int tempCurrentKeyword = isKeyWord(line, cont, keywords);
+    if (tempCurrentKeyword > 0){
+      //check if the temp is lower than the actual, if that is the case, return errror
+      currentKeyword = tempCurrentKeyword;
+      cont = cont + keywords[currentKeyword].size() - 1;
+      terms.clear();
+      operands.clear();
+    } else if (readingChar && line[cont] != '\''){
+      acum = acum + line[cont];
+    } else if (readingString && line[cont] != '"'){
+      acum = acum + line[cont];
+    } else if (line.substr(cont,keywordsFlag.size()).compare(keywordsFlag) == 0){
+      if (acum.size() > 0){
+        if (currentKeyword == 1 ||currentKeyword == 4){
+          acum = format(acum);
         }
-        cont++;
+        terms.push_back(acum);
+        acum = "";
       }
+      exceptKeyWordsFlag = true;
+      cont = cont + keywordsFlag.size() - 1;
+    } else if (line[cont] == '\''){
+      if (readingChar){
+        readingChar = false;
+      } else {
+        readingChar = true;
+      }
+      acum = acum + line[cont];
+    } else if (line[cont] == '"'){
+      if (readingString){
+        readingString = false;
+      } else {
+        readingString = true;
+      }
+      acum = acum + line[cont];
+    } else if (line[cont] == '='){
+      if (acum.size() > 0){
+        if (currentKeyword == 1 ||currentKeyword == 4){
+          acum = format(acum);
+        }
+        terms.push_back(acum);
+        acum = "";
+      }
+    } else if (line[cont] == '+' || line[cont] == '-'){
+      if (acum.size() > 0){
+        if (currentKeyword == 1 ||currentKeyword == 4){
+          acum = format(acum);
+        }
+        terms.push_back(acum);
+        acum = "";
+      }
+      operands.push_back(line[cont]);
+      acum = "";
+    } else if (line[cont] == '.'){
+      if (acum.size() > 0){
+        if (currentKeyword == 1 ||currentKeyword == 4){
+          acum = format(acum);
+        }
+        terms.push_back(acum);
+        acum = "";
+      }
+      switch(currentKeyword) {
+          case 1:
+          case 4:
+            while (operands.size() > 0){
+               if (operands[operands.size() - 1] == '+'){
+                terms[terms.size() - 2] = join( (terms[terms.size() - 2]), (terms[terms.size() - 1]), savedCharacters);
+                terms.pop_back();
+                operands.pop_back();
+              } else if (operands[operands.size() - 1] == '-'){
+                terms[terms.size() - 2] = remove( (terms[terms.size() - 2]), (terms[terms.size() - 1]), savedCharacters);
+                terms.pop_back();
+                operands.pop_back();
+              }
+              else {
+                //error
+              }
+            }
+            //cout << terms[terms.size() - 2] << endl;
+            if (currentKeyword == 1) {
+              if (terms.size() == 2){
+                //cout << terms[0] << " " << terms[1] << endl;
+                savedCharacters[terms[0]] = (terms[1]);
+                terms.clear();
+                operands.clear();
+              } else {
+                cout << "Error 1" << endl;
+              } 
+            } else {
+              if (terms.size() == 1){
+                whiteSpaces.push_back((terms[0]));
+                terms.clear();
+                operands.clear();
+              }  else {
+                cout << "Error" << endl;
+              } 
+            }
+            break;
+          case 2:
+            if (terms.size() == 2){
+              savedKeywords[terms[0]] = terms[1];
+              terms.clear();
+              operands.clear();
+            } 
+            break;
+          case 3:
+            if (terms.size() == 2){
+              terms[1] = format(terms[1]);
+              terms[1] = passToParentesis(replaceString(terms[1], "''", ")(", true));
+              size_t firstPosition = terms[1].find("{");
+              //cout << terms[1] << endl;
+              if (firstPosition != string::npos) {
+                terms[1] = replaceString(terms[1], "{", "(", false);
+                terms[1] = replaceString(terms[1], "}", ")*", false);
+              }
+              firstPosition = terms[1].find("[");
+              if (firstPosition != string::npos) {
+                terms[1] = replaceString(terms[1], "[", "(", false);
+                terms[1] = replaceString(terms[1], "]", ")+", false);
+              }
+              savedTokens[terms[0]] = terms[1];
+              tokenIds.push_back(terms[0]);
+              exceptTokens[terms[0]] = exceptKeyWordsFlag;
+              terms.clear();
+              operands.clear();
+            } else {
+              //Error
+            }
+            break;
+      }
+    } else if (isspace(line[cont])){
+      //terms.push_back(acum);
+      //acum = "";
+    } else {
+      acum = acum + line[cont];
+      //cout << line[cont];
     }
-    myfile.close();
+    cont++;
   }
-  else cout << "Unable to open file"; 
 }
+
+
+
 
 string mergeWhiteSpaces(vector<string>& whiteSpaces){
   string result = "";

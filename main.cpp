@@ -322,15 +322,6 @@ vector<string> setToStringVector(set<string> s){
     return result;
 }
 
-string printStack(stack<char> stack){
-    string result = "";
-    while (!stack.empty()){
-        result = result + stack.top();
-        stack.pop();
-    }
-    return result;
-}
-
 /*---------------------------------------------------------------------
  * Class:           SyntaxTree
  * Purpose:         Represents a SyntaxTree
@@ -370,7 +361,6 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 } else if (expr[i] == ')') {
                     while (opStack.top() != '('){
-                        //cout << result << " stack: " << printStack(opStack) << endl;
                         string s(1,opStack.top());
                         result.push_back(s);
                         opStack.pop();
@@ -772,6 +762,13 @@ int AFDirect::isTerminal(int currentState){
     return -1;
 }
 
+
+/*---------------------------------------------------------------------
+ * Function:      getTransition
+ * Purpose:       Get the position of the character in the alphabets set
+ * In arg:        charcterNumber, the character that is going to be search
+ * Return val:    The position of the character
+ */
 int AFDirect:: getTransition(string charcterNumber){
     int cont = 0 ;
     int transition = -1 ;//check if it does not change
@@ -788,7 +785,6 @@ int AFDirect:: getTransition(string charcterNumber){
     return transition;
 }
 
-
 /*---------------------------------------------------------------------
  * Function:      simulate
  * Purpose:       Simulate a direct deterministic finite automata for a input chain
@@ -804,9 +800,7 @@ void AFDirect::simulate(string chain){
     string readCharacters = "";
     while(i < chain.size()){
         int transition = getTransition(to_string((int)chain[i]));
-        //cout << transition << " "<< readCharacters << " "<< currentState << " "<<  transitions[currentState][transition] << endl;
         if (transitions[currentState][transition] == -1){
-            //cout << terminalId << " " << chequedStates.size() << endl;
             if (chequedStates.size() == 1){
                 readCharacters = readCharacters + chain[i];
                 i++;
@@ -851,8 +845,6 @@ void AFDirect::simulate(string chain){
             i++;
         }
     }
-    //cout << readCharacters << endl;
-
 }
 /*---------------------------------------------------------------------
  * Function:      writeAFDirect
@@ -1130,7 +1122,7 @@ int main(int argc, char **argv) {
     expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*((48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*)*(40)(72)(41)");
     expressionsId.push_back("hexnumber");
     exceptTokens["id"] = 1;
-    expressions.push_back("(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)((65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122))*|(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)");
+    expressions.push_back("letter(letter)*|letter");
     expressionsId.push_back("id");
     exceptTokens["number"] = 0;
     expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*");
@@ -1156,7 +1148,7 @@ int main(int argc, char **argv) {
     AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens);
     writeAFDirect(afdirect, "afdirect.txt");
     printAFDirect(afdirect); 
-    /* 
+    /*
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
