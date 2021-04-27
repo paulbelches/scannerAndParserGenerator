@@ -7,6 +7,7 @@
 #include <cctype>
 #include <algorithm>
 #include <map>
+#include <stdlib.h>
 using namespace std;
 
 /* File:     
@@ -74,8 +75,7 @@ string replaceString(string line, string patron, string newPatron, bool consider
         readingString = false;
       }
       result = result + line[i];
-    }
-    else if (readingChar){
+    } else if (readingChar){
       if (line[i] == '\''){
         readingChar= false;
       }
@@ -89,13 +89,16 @@ string replaceString(string line, string patron, string newPatron, bool consider
       result = result + line[i];
     }
     else if (line[i] == '\'' && !considerChains){
-      readingString = true;
+      readingChar = true;
       result = result + line[i];
     } else {
       result = result + line[i];
     }
+      
     i++;
-  }
+  }/*
+  cout << "//////////////////////////////////////////////////////////////" << patron << endl;
+  cout << "result?" << result << endl;*/
   return result;
 }
 
@@ -164,14 +167,21 @@ string lettersToNums(string line){
   return result;
 }
 
+string checkIfItsAId(string line, map<string, string>& references){
+  if (!isChar(line)){
+    if (references[line].size() > 0){
+      line = references[line];
+    } else {
+      throw std::invalid_argument( "Reference to nonexistent character set "+line);
+    }
+  }
+  return line;
+}
+
 string join(string s1, string s2, map<string, string>& references){
   //cout << "sum s1:" << s1 << " s2:" << s2 <<  " result:";
-  if (!isChar(s1)){
-    s1 = references[s1];
-  }
-  if (!isChar(s2)){
-    s2 = references[s2];
-  }
+  s1 = checkIfItsAId(s1,references);
+  s2 = checkIfItsAId(s2,references);
   string result;
   bool readingNumber = false;
   string number;
@@ -196,12 +206,8 @@ string join(string s1, string s2, map<string, string>& references){
 
 string remove(string s1, string s2, map<string, string>& references){
   //cout << "res s1:" << s1 << " s2:" << s2 <<  " result:";
-  if (!isChar(s1)){
-    s1 = references[s1];
-  }
-  if (!isChar(s2)){
-    s2 = references[s2];
-  }
+  s1 = checkIfItsAId(s1,references);
+  s2 = checkIfItsAId(s2,references);
   string result;
   bool readingNumber = false;
   string number;
@@ -239,6 +245,9 @@ string replaceTokens(string line, map<string,string>& map){
         if (map[acum].size() > 0){
           result = result  + map[acum];
         } else {
+          if (isalpha(acum[0])){
+            throw std::invalid_argument( "Reference to nonexistent character set "+acum );
+          }
           result = result  + acum;
         }
         acum = "";
@@ -289,14 +298,6 @@ void replace(map<string,string>& savedCharacters, map<string,string>& savedToken
   for(int i = 0; i < tokenIds.size(); i++){
     bool isReady = false;
     while (!isReady) {
-      string resultString = replaceTokens(savedTokens[tokenIds[i]], savedTokens);
-      isReady = equal( resultString.begin(), resultString.end(), savedTokens[tokenIds[i]].begin(), savedTokens[tokenIds[i]].end());
-      if (!isReady){
-        savedTokens[tokenIds[i]] = resultString;
-      }
-    }
-    isReady = false;
-    while (!isReady) {
       string resultString = replaceTokens(savedTokens[tokenIds[i]], savedCharacters);
       isReady = equal( resultString.begin(), resultString.end(), savedTokens[tokenIds[i]].begin(), savedTokens[tokenIds[i]].end());
       if (!isReady){
@@ -306,15 +307,14 @@ void replace(map<string,string>& savedCharacters, map<string,string>& savedToken
   }
 }
 
-int generateStream(string& file){
-    string filename("cocolEjemplo.txt");
+int generateStream(string& file, string filePath){
+    string filename(filePath);
     vector<char> bytes;
     char byte = 0;
 
     ifstream input_file(filename);
     if (!input_file.is_open()) {
-        cerr << "Could not open the file - '" << filename << "'" << endl;
-        return -1;
+        throw std::invalid_argument( "Could not open file");
     }
 
     while (input_file.get(byte)) {
@@ -324,13 +324,12 @@ int generateStream(string& file){
         file = file + i;
         //cout << i << " " << (int)i << " " << isspace(i) << endl;
     }
-    cout << endl;
     input_file.close();
 
     return 1;
 }
 
-void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, 
+void fillmaps(string filePath, map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, 
   vector<string>& whiteSpaces, map<string,bool>& exceptTokens, vector<string>& tokenIds){
   string line;
   
@@ -343,7 +342,7 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
   vector<string> terms;
   vector<char> operands;
 
-  generateStream(line);
+  generateStream(line, filePath);
   line = replaceString(line, "..", "$", false);
   int cont = 0;
   string acum = "";
@@ -390,8 +389,13 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
         if (currentKeyword == 1 ||currentKeyword == 4){
           acum = format(acum);
         }
+        if (terms.size() > 0){
+          throw std::invalid_argument( "Bad declaration");
+        }
         terms.push_back(acum);
         acum = "";
+      } else {
+        throw std::invalid_argument( "Missing identifier");
       }
     } else if (line[cont] == '+' || line[cont] == '-'){
       if (acum.size() > 0){
@@ -432,19 +436,29 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
             if (currentKeyword == 1) {
               if (terms.size() == 2){
                 //cout << terms[0] << " " << terms[1] << endl;
-                savedCharacters[terms[0]] = (terms[1]);
+                terms[1] = checkIfItsAId(terms[1], savedCharacters);
+                savedCharacters[terms[0]] = terms[1];
                 terms.clear();
                 operands.clear();
               } else {
-                cout << "Error 1" << endl;
+                cout << terms.size() << endl;
+                for (int i = 0; i < terms.size(); i++){
+                  cout << terms[i] << endl;
+                }
+                throw std::invalid_argument( "Bad set declaration ");
               } 
             } else {
               if (terms.size() == 1){
+                cout << terms[0] << " " << terms[1] << endl;
                 whiteSpaces.push_back((terms[0]));
                 terms.clear();
                 operands.clear();
               }  else {
-                cout << "Error" << endl;
+                cout << terms.size() << endl;
+                for (int i = 0; i < terms.size(); i++){
+                  cout << terms[i] << endl;
+                }
+                throw std::invalid_argument( "Bad set declaration ");
               } 
             }
             break;
@@ -457,22 +471,29 @@ void fillmaps(map<string,string>& savedKeywords, map<string,string>& savedCharac
             break;
           case 3:
             if (terms.size() == 2){
+              //cout << "token" << endl;
+              //cout << terms[1] << endl;
               terms[1] = format(terms[1]);
+              //cout << terms[1] << endl;
               terms[1] = passToParentesis(replaceString(terms[1], "''", ")(", true));
+              //cout << terms[1] << endl;
               size_t firstPosition = terms[1].find("{");
               //cout << terms[1] << endl;
               if (firstPosition != string::npos) {
                 terms[1] = replaceString(terms[1], "{", "(", false);
                 terms[1] = replaceString(terms[1], "}", ")*", false);
               }
+              //cout << terms[1] << endl;
               firstPosition = terms[1].find("[");
               if (firstPosition != string::npos) {
                 terms[1] = replaceString(terms[1], "[", "(", false);
                 terms[1] = replaceString(terms[1], "]", ")+", false);
               }
+              //cout << terms[1] << endl;
               savedTokens[terms[0]] = terms[1];
               tokenIds.push_back(terms[0]);
               exceptTokens[terms[0]] = exceptKeyWordsFlag;
+              exceptKeyWordsFlag = false;
               terms.clear();
               operands.clear();
             } else {
@@ -499,7 +520,15 @@ string mergeWhiteSpaces(vector<string>& whiteSpaces){
   return result; 
 }
 
-int main () {
+int main (int argc, char* argv[]) {
+
+  if (argc < 2){
+    cout << "An error ocurred\n";
+    cout << "Missing file path argument" << endl;
+    return 0;
+  }
+  string filePath = argv[1];
+
   map<string,string> savedKeywords;
   map<string,string> savedCharacters;
   map<string,string> savedTokens;
@@ -507,21 +536,26 @@ int main () {
   vector<string> tokenIds;
   vector<string> whiteSpaces;
   string resultWhiteSpaces;
-
-  fillmaps(savedKeywords, savedCharacters, savedTokens, whiteSpaces, exceptTokens, tokenIds);
-  passToOrs(savedCharacters);
-  //makeUnique(savedCharacters);
-  replace(savedCharacters, savedTokens, tokenIds);
-  //
-  resultWhiteSpaces = replaceString(mergeWhiteSpaces(whiteSpaces), "''", ",", true);
+  savedCharacters["ANY"] = format("CHR(0)$CHR(167)");
+  try {
+    fillmaps(filePath, savedKeywords, savedCharacters, savedTokens, whiteSpaces, exceptTokens, tokenIds);
+    passToOrs(savedCharacters);
+    //makeUnique(savedCharacters);
+    replace(savedCharacters, savedTokens, tokenIds);
+    resultWhiteSpaces = replaceString(mergeWhiteSpaces(whiteSpaces), "''", ",", true);
+  } catch (exception& e){
+    cout << "An error ocurred\n";
+    cout << e.what() << endl;
+    cout << "Check your expression and try again\n";
+    return 0;
+  }
   //Prints
-  for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
+  for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it){
     if (it->second.size() > 0) {
       cout << it->first << " " << it->second << endl;
-      cout << endl;
     }
   }
-  for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it){
+  for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
     if (it->second.size() > 0) {
       cout << it->first << " " << it->second << endl;
     }
@@ -531,6 +565,7 @@ int main () {
   }
   cout << resultWhiteSpaces << endl;
   //write file
+  
   string line;
   ifstream basefile;
   basefile.open("scanner.cpp");
@@ -541,15 +576,19 @@ int main () {
     {
       if (equal(line.begin(), line.end(), flag.begin(), flag.end())){
         string acum = "";
-        for(int i = 1; i < resultWhiteSpaces.size() - 1; i++){
-          if (resultWhiteSpaces[i] == ','){
-            newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
-            acum = "";
-          } else {
-            acum = acum  + resultWhiteSpaces[i];
+        cout << "Writing whitespaces " << endl;
+        if (resultWhiteSpaces.size() > 0){
+          for(int i = 1; i < resultWhiteSpaces.size() - 1; i++){
+            if (resultWhiteSpaces[i] == ','){
+              newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
+              acum = "";
+            } else {
+              acum = acum  + resultWhiteSpaces[i];
+            }
           }
+          newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
         }
-        newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
+        cout << "Writing tokens" << endl;
         for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
           if (it->second.size() > 0) {
             //cout << it->second << endl;
@@ -558,16 +597,22 @@ int main () {
             newfile <<  "    expressionsId.push_back(\"" << it->first <<"\");"<< endl;
           }
         }
-        //cout << "Siiiii\n";
+        cout << "Writing keywords" << endl;
+        for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it){
+          newfile <<  "    keywords[\"" << it->first << "\"] = "<< it->second <<";\n";
+        }
       } else {
         newfile << line << "\n";
       }
     }
    basefile.close();
    newfile.close();
+   cout << "Compiling file" << endl;
+   string command = "c++ main.cpp -o scanner.run";
+   system(command.c_str());
+   //cout << "To run the scanner use ./scanner.run <filepath> " << endl;
   } else {
     cout << "Unable to open file";
   }
-
   return 0;
 }

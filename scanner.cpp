@@ -554,6 +554,7 @@ class AFDirect{
     vector<string> expressions;
     vector<string> expressionsId;
     map<string,bool> exceptTokens;
+    map<string, string> keywords;
     set<int> whitespaces;
     //Methods
     int isTerminal(int currentState);
@@ -568,7 +569,7 @@ class AFDirect{
     * In arg:        start, the root of the syntax tree    alphabet, the automata alphabet
     */
     AFDirect(Node* start, set<string> alphabet, vector<int> finalids, vector<string> expressions , vector<string> expressionsId, 
-    set<int> whitespaces, map<string,bool> exceptTokens){
+    set<int> whitespaces, map<string,bool> exceptTokens, map<string, string> keywords){
         followpos(start);
        // cout << "alhabet " << setToString(alphabet) << endl;
         this->finalids = finalids;
@@ -577,6 +578,7 @@ class AFDirect{
         this->expressionsId = expressionsId;
         this->whitespaces = whitespaces;
         this->exceptTokens = exceptTokens;
+        this->keywords = keywords;
         queue<set<int>> pendingStates;
         states.push_back(setNodeToSetInt(start->firstpos));
         pendingStates.push(setNodeToSetInt(start->firstpos));
@@ -804,7 +806,8 @@ void AFDirect::simulate(string chain){
             i = i + 1;
         } else {
             int transition = getTransition(to_string((int)chain[i]));
-            if (transitions[currentState][transition] == -1){
+            //cout <<  chain[i] << " " << transition << " " << transitions[currentState][transition] << endl;
+            if (transitions[currentState][transition] == -1 || transition == -1){
                 if (chequedStates.size() == 1){
                     readCharacters = readCharacters + chain[i];
                     i++;
@@ -829,9 +832,10 @@ void AFDirect::simulate(string chain){
                     }
                     if (goback > -1){
                         i = i - goback;
+                        terminalId = isTerminal(currentState);
                         readCharacters = readCharacters.substr(0, readCharacters.size()-goback);
-                        if (exceptTokens[expressionsId[terminalId]]){
-                            cout << "<" << readCharacters << ", keyword>" << endl;
+                        if (exceptTokens[expressionsId[terminalId]] && keywords[readCharacters].size() > 0){
+                            cout << "<" << readCharacters << ", " << keywords[readCharacters] << ">" << endl;
                         } else {
                             cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
                         }
@@ -850,6 +854,14 @@ void AFDirect::simulate(string chain){
             }
         }
     }
+    //Process the pending chain
+    int terminalId = isTerminal(currentState);
+     if (exceptTokens[expressionsId[terminalId]] && keywords[readCharacters].size() > 0){
+        cout << "<" << readCharacters << ", " << keywords[readCharacters] << ">" << endl;
+    } else {
+        cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+    }
+
 }
 /*---------------------------------------------------------------------
  * Function:      writeAFDirect
@@ -1083,16 +1095,47 @@ bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
     return result;
 }
 
+/*
+int generateStream(string& file, string filePath){
+    string filename(filePath);
+    vector<char> bytes;
+    char byte = 0;
+
+    ifstream input_file(filename);
+    if (!input_file.is_open()) {
+        throw std::invalid_argument( "Could not open file");
+    }
+
+    while (input_file.get(byte)) {
+        bytes.push_back(byte);
+    }
+    for (const auto &i : bytes) {
+        file = file + i;
+        //cout << i << " " << (int)i << " " << isspace(i) << endl;
+    }
+    input_file.close();
+
+    return 1;
+}*/
+
 int main(int argc, char **argv) { 
+    /*
+    if (argc < 2){
+        cout << "An error ocurred\n";
+        cout << "Missing file path argument" << endl;
+    return 0;
+    }
+    string filePath = argv[1];
+    */
     vector<string> expressions;
     vector<string> expressionsId;
     map<string,bool> exceptTokens;
     vector<int> finalids;
     map<string,string> savedCharacters;
     set<int> whitespaces;
+    map<string,string> keywords;
     //INSERT EXPRESSIONS
     string expr = expand(expressions[0]);
-    cout << expr << endl;
     set<string> alphabet = getAlphabet(expr);
     expr = '(' + expr + ").#";
     SyntaxTree* syntaxtree = new SyntaxTree(expr);
@@ -1108,15 +1151,15 @@ int main(int argc, char **argv) {
         syntaxtree->join(tempsyntaxtree->root);
     }
     fillFunctions(syntaxtree->root);
-    printSyntaxTree(syntaxtree->root, 0);
-    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens);
+    //printSyntaxTree(syntaxtree->root, 0);
+    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens, keywords);
     writeAFDirect(afdirect, "afdirect.txt");
-    printAFDirect(afdirect); 
+    //printAFDirect(afdirect); 
     /*
     AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
     printAFDirect(afdirectmini);
     writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("if hola 12345");
+    afdirect->simulate("if hola 12345(H)? bi1234");
     /*
     string expr = expand(argv[1]); //asign the regex expresion
     string chain = argv[2];
