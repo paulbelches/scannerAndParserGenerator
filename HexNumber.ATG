@@ -6,7 +6,7 @@ COMPILER Aritmetica
 
 CHARACTERS 
 
-upletter = 'A' .. 'Z' + "..".
+upletter = 'A' .. 'Z'.
 downletter = 'a' .. 'z'.
 letter = "abcdefghijklmnopqrstuvwxyz" + upletter + downletter. 
 digit = "0123456789" .
@@ -31,4 +31,4 @@ signnumber = [sign]digit{digit}.
 whitetoken = whitespace{whitespace}.
 
 
-END Aritmetica
+END Aritmetica.

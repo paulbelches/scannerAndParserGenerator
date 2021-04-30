@@ -23,16 +23,21 @@ using namespace std;
  *    c++ fileReader.cpp -o main.run
  * 
  * Usage:
- *   main.run <'regular expresion'> <'string'>
+ *   main.run <filepath>
  *
  */
 
 
-const string flag = "    //INSERT EXPRESSIONS";
+const string flag = "        //INSERT EXPRESSIONS";
 const string keywords[] = {"COMPILER", "CHARACTERS", "KEYWORDS", "TOKENS", "IGNORE", "PRODUCTIONS", "END"};
 const string keywordsFlag = {"EXCEPT KEYWORDS"} ;
 const string tokenOperator = "()|*+";
-
+/*---------------------------------------------------------------------
+ * Function:      isKeyWord
+ * Purpose:       Check whether a input is a keyword
+ * In arg:        line,the input line   cont,the current position of the iterator   keyword,array of keywords
+ * Return val:    if its is a keyword or not
+ */
 int isKeyWord(string line, int cont, const string keywords[]){
   //change the 6
   for (int i = 0; i < 6; i++){
@@ -42,15 +47,30 @@ int isKeyWord(string line, int cont, const string keywords[]){
   }
   return -1;
 }
-
+/*---------------------------------------------------------------------
+ * Function:      isString
+ * Purpose:       Check whether a input is a string
+ * In arg:        line,the input line  
+ * Return val:    if its is a string or not
+ */
 bool isString(string line){
   return (line[0] == '"'  && line[line.size() - 1] == '"');
 }
-
+/*---------------------------------------------------------------------
+ * Function:      isChar
+ * Purpose:       Check whether a input is a char
+ * In arg:        line,the input line  
+ * Return val:    if its is a char or not
+ */
 bool isChar(string line){
   return (line[0] == '\''  && line[line.size() - 1] == '\'');
 }
-
+/*---------------------------------------------------------------------
+ * Function:      sustituteRange
+ * Purpose:       sustitute a range into the list of characters it represents
+ * In arg:        line,the input line  
+ * Return val:    sustituted line
+ */
 string sustituteRange(string line){
   size_t firstPosition = line.find("$");
   if (firstPosition != string::npos) {
@@ -63,7 +83,12 @@ string sustituteRange(string line){
   }
   return line;
 }
-
+/*---------------------------------------------------------------------
+ * Function:      replaceString
+ * Purpose:       sustitute a string patron , for a new patron taking in consideration inside string and chars or not
+ * In arg:        line,the input line  patron,the patron that is goig to be recognize newPatron,the patron that is going to sustituted  considerChain, whether to check inside strings or not
+ * Return val:    sustituted line
+ */
 string replaceString(string line, string patron, string newPatron, bool considerChains){
   bool readingString = false;
   bool readingChar = false;
@@ -102,6 +127,12 @@ string replaceString(string line, string patron, string newPatron, bool consider
   return result;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      passToParentesis
+ * Purpose:       pass from quotes to parentesis
+ * In arg:        line,the input line
+ * Return val:    sustituted line
+ */
 string passToParentesis(string line){
   string result = "";
   int p = 0;
@@ -120,6 +151,12 @@ string passToParentesis(string line){
   return result;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      sustituteChar
+ * Purpose:       Remove all  "CHR()" from a input line
+ * In arg:        line,the input line
+ * Return val:    sustituted line
+ */
 string sustituteChar(string line){
   size_t firstPosition = line.find("CHR(");
   while (firstPosition != string::npos) {
@@ -131,6 +168,12 @@ string sustituteChar(string line){
   return line;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      lettersToNums
+ * Purpose:       Pass strings and chars for its numerical representations
+ * In arg:        line the input line
+ * Return val:    sustituted line
+ */
 string lettersToNums(string line){
   bool readingString = false;
   bool readingChar = false;
@@ -167,6 +210,12 @@ string lettersToNums(string line){
   return result;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      checkIfItsAId
+ * Purpose:       Check if the input is a valid id
+ * In arg:        line,the input line  references,the reference table
+ * Return val:    sustituted line
+ */
 string checkIfItsAId(string line, map<string, string>& references){
   if (!isChar(line)){
     if (references[line].size() > 0){
@@ -178,6 +227,13 @@ string checkIfItsAId(string line, map<string, string>& references){
   return line;
 }
 
+
+/*---------------------------------------------------------------------
+ * Function:      join
+ * Purpose:       join two sets
+ * In arg:        s1,set 1  s2,set 2  references,the reference table
+ * Return val:    sustituted line
+ */
 string join(string s1, string s2, map<string, string>& references){
   //cout << "sum s1:" << s1 << " s2:" << s2 <<  " result:";
   s1 = checkIfItsAId(s1,references);
@@ -204,6 +260,12 @@ string join(string s1, string s2, map<string, string>& references){
   return s1;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      remove
+ * Purpose:       remove one set from another set
+ * In arg:        s1,set 1  s2,set 2  references,the reference table
+ * Return val:    sustituted line
+ */
 string remove(string s1, string s2, map<string, string>& references){
   //cout << "res s1:" << s1 << " s2:" << s2 <<  " result:";
   s1 = checkIfItsAId(s1,references);
@@ -228,18 +290,31 @@ string remove(string s1, string s2, map<string, string>& references){
   return s1;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      format
+ * Purpose:       format the strings into the numeric form
+ * In arg:        term , the input string
+ * Return val:    sustituted line
+ */
 string format(string term){
   return sustituteRange(sustituteChar(lettersToNums(term)));
 }
 
+/*---------------------------------------------------------------------
+ * Function:      replaceTokens
+ * Purpose:       Replace tokens for its set
+ * In arg:        line, input line   map, reference map
+ * Return val:    sustituted line
+ */
 string replaceTokens(string line, map<string,string>& map){
-  //cout << line << endl;
   string acum = "";
   string result = "";
   for (int i = 0; i < line.size(); i++){
-    if (tokenOperator.find(line[i]) == string::npos){
+    if (tokenOperator.find(line[i]) == string::npos && (!isspace(line[i]))){
       acum = acum + line[i];
+      //cout << acum<< endl;
     } else {
+      //cout << "|" << acum << "|" << endl;
       //check the acum content
       if (acum.size() > 0){
         if (map[acum].size() > 0){
@@ -266,34 +341,24 @@ string replaceTokens(string line, map<string,string>& map){
   return result;
 }
 
-void makeUnique(map<string,string>& savedCharacters){
-  for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it){
-    string acum = "";
-    set<string> readNumbers;
-    for (int i = 1; i < it->second.size() - 2; i++){
-      if (it->second[i] == '|'){
-        if (acum .size() > 0){
-          readNumbers.insert(acum);
-          acum = "";
-        } 
-      } else {
-        acum = acum + it->second[i];
-      }
-    }
-    readNumbers.insert(acum);
-    for (auto const &h: readNumbers) {
-      //cout << h << endl;
-    }
-
-  }
-};
-
+/*---------------------------------------------------------------------
+ * Function:      passToOrs
+ * Purpose:       Replace quotes to or operators
+ * In arg:        savedCharacters, reference map
+ * Return val:    -------------
+ */
 void passToOrs(map<string,string>& savedCharacters){
   for(auto it = savedCharacters.cbegin(); it != savedCharacters.cend(); ++it){
     savedCharacters[it->first] = "(" + replaceString(it->second.substr(1, it->second.size() - 2), "''", "|", true ) + ")";
   }
 };
 
+/*---------------------------------------------------------------------
+ * Function:      replace
+ * Purpose:       Call all token replacements
+ * In arg:        savedCharacters, saved characters  savedTokens, saved tokens  tokenIds, the vector of the input tokens
+ * Return val:    -------------
+ */
 void replace(map<string,string>& savedCharacters, map<string,string>& savedTokens, vector<string>& tokenIds){
   for(int i = 0; i < tokenIds.size(); i++){
     bool isReady = false;
@@ -301,12 +366,17 @@ void replace(map<string,string>& savedCharacters, map<string,string>& savedToken
       string resultString = replaceTokens(savedTokens[tokenIds[i]], savedCharacters);
       isReady = equal( resultString.begin(), resultString.end(), savedTokens[tokenIds[i]].begin(), savedTokens[tokenIds[i]].end());
       if (!isReady){
-        savedTokens[tokenIds[i]] = resultString;
+        savedTokens[tokenIds[i]] = replaceString(resultString, " ", "", false );
       }
     }
   }
 }
-
+/*---------------------------------------------------------------------
+ * Function:      generateStream
+ * Purpose:       Read input file
+ * In arg:        file, the pointer where the file is going to be saved      filepath, the file path
+ * Return val:    Resulting state
+ */
 int generateStream(string& file, string filePath){
     string filename(filePath);
     vector<char> bytes;
@@ -329,6 +399,13 @@ int generateStream(string& file, string filePath){
     return 1;
 }
 
+/*---------------------------------------------------------------------
+ * Function:      fillmaps
+ * Purpose:       Fill maps with the input from the file
+ * In arg:        filePath, fiel path to atg file savedKeywords, map of keywords  savedCharacters, map of the input charcter sets
+ *                savedTokens, the saved tokens map  whiteSpaces, the whitespaces vector  exceptTokens, the excepted tokens  tokenIds, the token id vector
+ * Return val:    -------------
+ */
 void fillmaps(string filePath, map<string,string>& savedKeywords, map<string,string>& savedCharacters, map<string,string>& savedTokens, 
   vector<string>& whiteSpaces, map<string,bool>& exceptTokens, vector<string>& tokenIds){
   string line;
@@ -449,8 +526,9 @@ void fillmaps(string filePath, map<string,string>& savedKeywords, map<string,str
               } 
             } else {
               if (terms.size() == 1){
-                cout << terms[0] << " " << terms[1] << endl;
-                whiteSpaces.push_back((terms[0]));
+                cout << "//////////////////////////////////" << endl;
+                cout << terms[0]<< endl;
+                whiteSpaces.push_back(checkIfItsAId(terms[0], savedCharacters));
                 terms.clear();
                 operands.clear();
               }  else {
@@ -502,8 +580,9 @@ void fillmaps(string filePath, map<string,string>& savedKeywords, map<string,str
             break;
       }
     } else if (isspace(line[cont])){
-      //terms.push_back(acum);
-      //acum = "";
+      if (currentKeyword == 3 && terms.size() > 0) {
+        acum = acum + line[cont];
+      }
     } else {
       acum = acum + line[cont];
       //cout << line[cont];
@@ -512,6 +591,12 @@ void fillmaps(string filePath, map<string,string>& savedKeywords, map<string,str
   }
 }
 
+/*---------------------------------------------------------------------
+ * Function:      mergeWhiteSpaces
+ * Purpose:       Merge white spaces
+ * In arg:        whiteSpaces, vector of the input whitespaces
+ * Return val:    Resulting chain
+ */
 string mergeWhiteSpaces(vector<string>& whiteSpaces){
   string result = "";
   for(int i = 0; i < whiteSpaces.size(); i++){
@@ -536,7 +621,7 @@ int main (int argc, char* argv[]) {
   vector<string> tokenIds;
   vector<string> whiteSpaces;
   string resultWhiteSpaces;
-  savedCharacters["ANY"] = format("CHR(0)$CHR(167)");
+  savedCharacters["ANY"] = format("CHR(33)$CHR(126)");
   try {
     fillmaps(filePath, savedKeywords, savedCharacters, savedTokens, whiteSpaces, exceptTokens, tokenIds);
     passToOrs(savedCharacters);
@@ -580,22 +665,19 @@ int main (int argc, char* argv[]) {
         if (resultWhiteSpaces.size() > 0){
           for(int i = 1; i < resultWhiteSpaces.size() - 1; i++){
             if (resultWhiteSpaces[i] == ','){
-              newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
+              newfile <<  "        whitespaces.insert(" << acum << ");" << endl;
               acum = "";
             } else {
               acum = acum  + resultWhiteSpaces[i];
             }
           }
-          newfile <<  "    whitespaces.insert(" << acum << ");" << endl;
+          newfile <<  "        whitespaces.insert(" << acum << ");" << endl;
         }
         cout << "Writing tokens" << endl;
-        for(auto it = savedTokens.cbegin(); it != savedTokens.cend(); ++it){
-          if (it->second.size() > 0) {
-            //cout << it->second << endl;
-            newfile <<  "    exceptTokens[\"" << it->first << "\"] = "<< exceptTokens[it->first] <<";\n";
-            newfile <<  "    expressions.push_back(\"" << it->second <<"\");"<< endl;
-            newfile <<  "    expressionsId.push_back(\"" << it->first <<"\");"<< endl;
-          }
+        for (int i = 0; i < tokenIds.size(); i++){
+          newfile <<  "        exceptTokens[\"" << tokenIds[i] << "\"] = "<< exceptTokens[tokenIds[i]] <<";\n";
+          newfile <<  "        expressions.push_back(\"" << savedTokens[tokenIds[i]] <<"\");"<< endl;
+          newfile <<  "        expressionsId.push_back(\"" << tokenIds[i] <<"\");"<< endl;
         }
         cout << "Writing keywords" << endl;
         for(auto it = savedKeywords.cbegin(); it != savedKeywords.cend(); ++it){
@@ -610,7 +692,7 @@ int main (int argc, char* argv[]) {
    cout << "Compiling file" << endl;
    string command = "c++ main.cpp -o scanner.run";
    system(command.c_str());
-   //cout << "To run the scanner use ./scanner.run <filepath> " << endl;
+   cout << "To run the scanner use ./scanner.run <filepath> " << endl;
   } else {
     cout << "Unable to open file";
   }

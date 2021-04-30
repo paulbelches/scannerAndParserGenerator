@@ -2,7 +2,7 @@ COMPILER MyCOCOR
 (.//Especificacion de Funciones.)
 CHARACTERS
 
-letter= "ABCDEFGHIJKLMNÑOPQRSTUVWXYZabcdefghijklmnñopqrstuvwxyz".
+letter= "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".
 digit= "0123456789".
 
 cr = CHR(13).
@@ -10,25 +10,23 @@ lf = CHR(10).
 tab = CHR(9).
 ignore = cr+lf+tab.
 comillas = CHR(34).
-stringletter = ANY-comillas-ignore.
-
+stringletter = ANY-comillas.
+charnumber = "CHR("digit{digit}")".
 operadores ="+-=()[]{}|.<>".
-MyANY = ANY-operadores.
+MyANY = ANY-operadores-ignore.
 
 TOKENS
 
+string = comillas({stringletter})comillas.
 ident = letter{letter|digit} EXCEPT KEYWORDS.
-string = comillas stringletter{stringletter} comillas.
-
-char = "'"["/"]letter"'".
-charnumber = "CHR("digit{digit}")".
-charinterval = "CHR("digit{digit}")""..""CHR("digit{digit}")".
-
-nontoken = MyANY.
 startcode ="(.".
+charnumber = "CHR("digit{digit}")".
+char = "'"["/"]letter"'".
 endcode=".)".
+nontoken = MyANY.
+charinterval = "CHR("digit{digit}")""..""CHR("digit{digit}")"
 
-IGNORE SET ignore
-
+IGNORE ignore.
 
 END MyCOCOR
+

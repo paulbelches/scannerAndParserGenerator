@@ -344,12 +344,7 @@ class SyntaxTree{
     vector<string> result;
     for (int i = 0; i < expr.length(); i = i + 1){
         //cout << expr[i] << endl;
-        if (readingString){
-            if (expr[i] == '"'){
-                readingString = false;
-            }
-            tempValue = tempValue + expr[i];
-        } else if (isOperator(expr[i])){
+        if (isOperator(expr[i])){
             if(tempValue.size() > 0){
                 result.push_back(tempValue);
                 tempValue = "";
@@ -380,9 +375,6 @@ class SyntaxTree{
                     opStack.push(expr[i]);
                 }
             }
-        }  else if (expr[i] == '"'){
-            readingString = true;
-            tempValue = tempValue  + expr[i];
         } else {
             tempValue = tempValue + expr[i];
         }
@@ -806,8 +798,8 @@ void AFDirect::simulate(string chain){
             i = i + 1;
         } else {
             int transition = getTransition(to_string((int)chain[i]));
-            //cout <<  chain[i] << " " << transition << " " << transitions[currentState][transition] << endl;
             if (transitions[currentState][transition] == -1 || transition == -1){
+            //cout << readCharacters << " " << chain[i] << " " << (int)chain[i] << " " << currentState << " " << transition << " " << transitions[currentState][transition] << endl;
                 if (chequedStates.size() == 1){
                     readCharacters = readCharacters + chain[i];
                     i++;
@@ -856,10 +848,12 @@ void AFDirect::simulate(string chain){
     }
     //Process the pending chain
     int terminalId = isTerminal(currentState);
-     if (exceptTokens[expressionsId[terminalId]] && keywords[readCharacters].size() > 0){
-        cout << "<" << readCharacters << ", " << keywords[readCharacters] << ">" << endl;
-    } else {
-        cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+    if (terminalId > 0){
+        if (exceptTokens[expressionsId[terminalId]] && keywords[readCharacters].size() > 0){
+            cout << "<" << readCharacters << ", " << keywords[readCharacters] << ">" << endl;
+        } else {
+            cout << "<" << readCharacters << "," << expressionsId[terminalId] << ">" << endl;
+        }
     }
 
 }
@@ -869,7 +863,7 @@ void AFDirect::simulate(string chain){
  * In arg:        afdirect, the direct deterministic finite automata       name, the name of the file
  * Return val:    -------
  */
-void writeAFDirect(AFDirect* afdirect, string name){ //, vector<int> finalNumers){
+void writeAFDirect(AFDirect* afdirect, string name){ 
     fstream my_file;
 	my_file.open(name, ios::out);
     //cout << nodes.size() << "\n";
@@ -1076,26 +1070,6 @@ AFDirect* minimization(vector <set<int>> states, set<string> alphabet,vector <ve
     //return NULL;
 }
 
-/*---------------------------------            if (tempValue.size()>0) {
-                result.insert(tempValue);
-            }
-            tempValue = "";------------------------------------
- * Function:      checkAlphabet
- * Purpose:       Compare if the alphabet os the input string is the same of the regular expresion
- * In arg:        alphaber,alphabet of the regular expresion  chainAlphabet, alphabet of the input string
- * Return val:    Resulting flag
- */
-bool checkAlphabet(set<string> alphabet, set<string> chainAlphabet){
-    bool result = true;
-    for (auto const &e: chainAlphabet) {
-        if (alphabet.find(e) == alphabet.end()){
-            result = false;
-        }
-    }
-    return result;
-}
-
-/*
 int generateStream(string& file, string filePath){
     string filename(filePath);
     vector<char> bytes;
@@ -1103,9 +1077,8 @@ int generateStream(string& file, string filePath){
 
     ifstream input_file(filename);
     if (!input_file.is_open()) {
-        throw std::invalid_argument( "Could not open file");
+        throw std::invalid_argument( "Could not open input file");
     }
-
     while (input_file.get(byte)) {
         bytes.push_back(byte);
     }
@@ -1116,106 +1089,78 @@ int generateStream(string& file, string filePath){
     input_file.close();
 
     return 1;
-}*/
+}
 
-int main(int argc, char **argv) { 
-    /*
+int main(int argc, char **argv) {     
     if (argc < 2){
         cout << "An error ocurred\n";
         cout << "Missing file path argument" << endl;
-    return 0;
-    }
-    string filePath = argv[1];
-    */
-    vector<string> expressions;
-    vector<string> expressionsId;
-    map<string,bool> exceptTokens;
-    vector<int> finalids;
-    map<string,string> savedCharacters;
-    set<int> whitespaces;
-    map<string,string> keywords;
-    exceptTokens["decnumber"] = 0;
-    expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*(46)(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*");
-    expressionsId.push_back("decnumber");
-    exceptTokens["number"] = 0;
-    expressions.push_back("(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*");
-    expressionsId.push_back("number");
-    exceptTokens["white"] = 0;
-    expressions.push_back("(10|13|9|32)((10|13|9|32))*");
-    expressionsId.push_back("white");
-    keywords["do"] = "do";
-    keywords["while"] = "while";
-    string expr = expand(expressions[0]);
-    set<string> alphabet = getAlphabet(expr);
-    expr = '(' + expr + ").#";
-    SyntaxTree* syntaxtree = new SyntaxTree(expr);
-
-    finalids.push_back(syntaxtree->root->right->id);
-    for (int i = 1; i < expressions.size(); i = i + 1){
-        string expr = expand(expressions[i]);
-        set<string> tempAlphabet = getAlphabet(expr);
-        alphabet.insert(tempAlphabet.begin(), tempAlphabet.end());
-        expr = '(' + expr + ").#";
-        SyntaxTree* tempsyntaxtree = new SyntaxTree(expr);
-        finalids.push_back(tempsyntaxtree->root->right->id);
-        syntaxtree->join(tempsyntaxtree->root);
-    }
-    fillFunctions(syntaxtree->root);
-    //printSyntaxTree(syntaxtree->root, 0);
-    AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens, keywords);
-    writeAFDirect(afdirect, "afdirect.txt");
-    //printAFDirect(afdirect); 
-    /*
-    AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
-    printAFDirect(afdirectmini);
-    writeAFDirect(afdirectmini, "afdirectmini.txt");*/
-    afdirect->simulate("if hola 12345(H)? bi1234");
-    /*
-    string expr = expand(argv[1]); //asign the regex expresion
-    string chain = argv[2];
-    set<string> alphabet = getAlphabet(expr);
-    //set<string> chainAlphabet = getAlphabet(chain);
-    
-    if (!correctParentesis(expr)){
-        cout << "Error: Missing parentesis\n";
-        cout << "Check your expression and try again\n";
         return 0;
     }
-    /*if (!checkAlphabet(alphabet, chainAlphabet)){
-        cout << "Error: The alphabet of the regular expression and the input string are not the same\n";
-        cout << "Check your expression and try again\n";
-        return 0;
-    }*/
-    /*
     try {
-        cout << expr << "\n";
+        string filePath = argv[1];
+        string input;
+        generateStream(input, filePath);
+        if (input.size() <= 0){
+            cout << "Input file is empty\n";
+            return 0;
+        }
+        vector<string> expressions;
+        vector<string> expressionsId;
+        map<string,bool> exceptTokens;
+        vector<int> finalids;
+        map<string,string> savedCharacters;
+        set<int> whitespaces;
+        map<string,string> keywords;
+        whitespaces.insert(13);
+        whitespaces.insert(10);
+        whitespaces.insert(9);
+        exceptTokens["string"] = 0;
+        expressions.push_back("(34)(((33|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|91|92|93|94|95|96|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122|123|124|125|126))*)(34)");
+        expressionsId.push_back("string");
+        exceptTokens["ident"] = 1;
+        expressions.push_back("(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)((65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)|(48|49|50|51|52|53|54|55|56|57))*");
+        expressionsId.push_back("ident");
+        exceptTokens["startcode"] = 0;
+        expressions.push_back("(40)(46)");
+        expressionsId.push_back("startcode");
+        exceptTokens["charnumber"] = 0;
+        expressions.push_back("(67)(72)(82)(40)(48|49|50|51|52|53|54|55|56|57)((48|49|50|51|52|53|54|55|56|57))*(41)");
+        expressionsId.push_back("charnumber");
+        exceptTokens["char"] = 0;
+        expressions.push_back("(39)((47))+(65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122)(39)");
+        expressionsId.push_back("char");
+        exceptTokens["endcode"] = 0;
+        expressions.push_back("(46)(41)");
+        expressionsId.push_back("endcode");
+        exceptTokens["nontoken"] = 0;
+        expressions.push_back("(33|34|35|36|37|38|39|42|44|47|48|49|50|51|52|53|54|55|56|57|58|59|63|64|65|66|67|68|69|70|71|72|73|74|75|76|77|78|79|80|81|82|83|84|85|86|87|88|89|90|92|94|95|96|97|98|99|100|101|102|103|104|105|106|107|108|109|110|111|112|113|114|115|116|117|118|119|120|121|122|126)");
+        expressionsId.push_back("nontoken");
+        string expr = expand(expressions[0]);
+        set<string> alphabet = getAlphabet(expr);
         expr = '(' + expr + ").#";
-        cout << expr << "\n";
         SyntaxTree* syntaxtree = new SyntaxTree(expr);
-        fillFunctions(syntaxtree->root);
-        cout << "///////////////////////Binary tree/////////////////////// \n";
+        finalids.push_back(syntaxtree->root->right->id);
+        for (int i = 1; i < expressions.size(); i = i + 1){
+            string expr = expand(expressions[i]);
+            set<string> tempAlphabet = getAlphabet(expr);
+            alphabet.insert(tempAlphabet.begin(), tempAlphabet.end());
+            expr = '(' + expr + ").#";
+            SyntaxTree* tempsyntaxtree = new SyntaxTree(expr);
+            finalids.push_back(tempsyntaxtree->root->right->id);
+            syntaxtree->join(tempsyntaxtree->root);
+        }
         printSyntaxTree(syntaxtree->root, 0);
-        cout << "//////////////////////////////////////////////////////// \n";
+        fillFunctions(syntaxtree->root);
         
-        AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet);
+        AFDirect* afdirect = new AFDirect(syntaxtree->root, alphabet, finalids, expressions, expressionsId, whitespaces, exceptTokens, keywords);
         writeAFDirect(afdirect, "afdirect.txt");
         printAFDirect(afdirect);
-        
-        cout << "///////////////////////Minimization/////////////////////// \n";
-        AFDirect* afdirectmini = minimization(afdirect->states, afdirect->alphabet,afdirect->transitions, afdirect->getNumber("#"));
-        printAFDirect(afdirectmini);
-        writeAFDirect(afdirectmini, "afdirectmini.txt");
-        /*
-        auto start = high_resolution_clock::now();
-        cout << "Direct deterministic finite automata: " << (simulateAFDirect(afdirect, chain)? "approved\n" : "rejected\n");
-        auto stop = high_resolution_clock::now();
-        auto duration = duration_cast<microseconds>(stop - start); 
-        cout << "Execution time(microseconds): " << duration.count() << endl;  
-        */
-       /*
+        afdirect->simulate(input);
+
     } catch (std::exception& e) {
         cout << "Error: An error ocurred\n";
         cout << "Check your expression and try again\n";
-    }*/
+    }
     return 0;
 }
