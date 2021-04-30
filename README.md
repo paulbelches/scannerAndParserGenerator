@@ -1,6 +1,6 @@
 # Scanner and Parser Generator
 
-## main.cpp
+## fileReader.cpp
 ### Purpose:
       Using a input atg file, generate a token scanner for the input gramatic. 
  
@@ -18,3 +18,17 @@
  
 ### Execute the scanner:
      ./scanner.run <filepath to be analized>
+
+
+## fileGenerator.py
+### Purpose:
+      Generate files for the example gramatics.   
+ 
+### Output:
+      3 multi token files:
+            hex.txt
+            ari.txt
+            double
+
+### Usage:
+     python3 fileGenerator.py

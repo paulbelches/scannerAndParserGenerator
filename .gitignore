@@ -35,3 +35,7 @@
 *.txt
 *.gv
 *.pdf
+
+# Compiled files
+*.run
+*.run7
